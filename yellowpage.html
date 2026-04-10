@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>성의교정 통합 지원포털</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <style>
+        /* [디자인] 첫 번째 소스의 130px 레이아웃 유지 */
+        * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+        body { background-color: #f8fafc; margin: 0; padding: 1rem; }
+        .container { max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 15px; }
+        
+        /* [상태표시] 식단 소스 스타일 이식 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .status-pill { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+        .dot-online { background-color: #10B981; box-shadow: 0 0 6px #10B981; }
+        .dot-offline { background-color: #EF4444; box-shadow: 0 0 6px #EF4444; }
+        .dot-sync { background-color: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
+        .status-text { font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; }
+
+        .search-box { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; font-size: 16px; outline: none; }
+        .tabs { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; }
+        .tab { padding: 6px 12px; background: #f1f5f9; border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap; color: #64748b; }
+        .tab.active { background: #1e3a8a; color: white; font-weight: bold; }
+
+        /* [리스트] 130px 고정 레이아웃 적용 */
+        .phone-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; flex-direction: column; }
+        .top-line { display: flex; align-items: center; width: 100%; gap: 2px; }
+        .name-area { width: 130px !important; min-width: 130px !important; flex-shrink: 0; }
+        .name-text { font-size: 15px; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .num-area { flex: 1; text-align: right; padding-right: 6px; min-width: 0; }
+        .num-text { font-size: 14px; font-weight: 700; color: #334155; }
+        .special-navy { color: #1e3a8a !important; font-style: italic !important; font-weight: 800 !important; }
+        .icon-area { width: 60px !important; min-width: 60px !important; display: flex; justify-content: flex-end; gap: 4px; flex-shrink: 0; }
+        .btn-icon { text-decoration: none !important; background: #f8fafc; color: #475569 !important; border: 1px solid #e2e8f0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-weight: 800; font-size: 10px; }
+        .btn-m { background: #ecfdf5; color: #059669 !important; border-color: #d1fae5; }
+        .bottom-line { margin-top: 3px; width: 100%; }
+        .work-text { font-size: 12px; color: #10b981; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div style="font-weight: 900; color: #1e3a8a; font-size: 14px;">Catholic Yellowpage</div>
+        <div id="statusPill" class="status-pill">
+            <span id="statusDot" class="status-dot dot-offline"></span>
+            <span id="statusText" class="status-text">준비 중</span>
+        </div>
+    </div>
+
+    <input type="text" id="search-input" class="search-box" placeholder="🔍 성함, 부서, 업무, 초성 검색">
+    
+    <div class="tabs" id="tab-container">
+        <div class="tab active" onclick="filterTab('전체')">전체</div>
+        <div class="tab" onclick="filterTab('보안')">보안</div>
+        <div class="tab" onclick="filterTab('시설')">시설</div>
+        <div class="tab" onclick="filterTab('미화')">미화</div>
+        <div class="tab" onclick="filterTab('총무')">총무</div>
+        <div class="tab" onclick="filterTab('지원')">지원</div>
+        <div class="tab" onclick="filterTab('기타')">기타</div>
+    </div>
+
+    <div id="list-container"></div>
+</div>
+
+<script>
+    // 연락망 데이터 URL
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQpOX8Ll6no4uXd5jnK0umTY3U_eKZXcDK2z_f2EsxSQDuOqk4YGzNkULJn_WgjTFBUseCbl6smBh0Z/pub?gid=1424582869&single=true&output=csv";
+    let allData = [];
+    let currentTab = "전체";
+
+    function getChosung(str) {
+        const cho = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+        let result = "";
+        for (let i = 0; i < str.length; i++) {
+            const code = str.charCodeAt(i) - 44032;
+            if (code > -1 && code < 11172) result += cho[Math.floor(code / 588)];
+            else result += str.charAt(i);
+        }
+        return result;
+    }
+
+    // [핵심] 식단 소스의 Offline-First 로직 적용
+    async function loadData() {
+        const dot = document.getElementById('statusDot');
+        const txt = document.getElementById('statusText');
+        
+        // 1. 우선 로컬 캐시 확인
+        const backup = localStorage.getItem("yellowpage_cache");
+        if (backup) {
+            allData = JSON.parse(backup);
+            dot.className = "status-dot dot-sync"; // 동기화 중 표시
+            txt.innerText = "LOCAL (OFFLINE)";
+            renderList(); // 즉시 화면 표시
+        }
+
+        // 2. 백그라운드에서 최신 CSV 데이터 가져오기
+        try {
+            const res = await fetch(CSV_URL + "?t=" + new Date().getTime());
+            if (!res.ok) throw new Error();
+            const text = await res.text(); // CSV는 text로 읽어야 함
+            
+            // 데이터 파싱 및 가공
+            const rows = text.split('\n').slice(1);
+            const newData = rows.map(row => {
+                const cols = row.split(',').map(c => c.trim());
+                const item = {
+                    cat: cols[0] || "",
+                    dept: cols[1] || "",
+                    name: cols[2] || "",
+                    tel: cols[3] || "",
+                    hp: cols[4] || "",
+                    work: cols[5] || ""
+                };
+                item.search_text = (item.name + item.dept + item.work).toLowerCase();
+                item.cho = getChosung(item.search_text);
+                return item;
+            });
+
+            allData = newData;
+            localStorage.setItem("yellowpage_cache", JSON.stringify(newData)); // 캐시 업데이트
+            
+            dot.className = "status-dot dot-online";
+            txt.innerText = "ONLINE (SYNCED)";
+            renderList(); 
+        } catch (e) {
+            console.error("데이터 동기화 실패");
+            if (!backup) {
+                dot.className = "status-dot dot-offline";
+                txt.innerText = "ERROR (NO DATA)";
+            }
+        }
+    }
+
+    function renderList() {
+        const query = document.getElementById('search-input').value.toLowerCase().replace(/\s/g, "");
+        const container = document.getElementById('list-container');
+        container.innerHTML = "";
+
+        const filtered = allData.filter(item => {
+            const tabMatch = (currentTab === "전체") || item.cat.includes(currentTab) || item.dept.includes(currentTab);
+            if (!tabMatch) return false;
+            if (!query) return true;
+            const isCho = /^[ㄱ-ㅎ]+$/.test(query);
+            return isCho ? item.cho.includes(query) : item.search_text.includes(query);
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">데이터가 없습니다.</div>`;
+            return;
+        }
+
+        filtered.forEach(r => {
+            const d_name = r.name || r.dept;
+            const d_work = (r.work === r.dept || r.work === r.name) ? "" : r.work;
+            let n_html = "", t_icon = "";
+            if (r.tel && r.tel !== 'nan' && r.tel !== '') {
+                const disp_num = r.tel.replace('02-3147-', '').replace('02-2258-', '');
+                const isSpecial = r.tel.includes('*1') || r.tel.includes('2258');
+                const cleanTel = r.tel.replace(/[^0-9*]/g, '');
+                let t_url = cleanTel.includes('*1') ? `tel:022258${cleanTel.replace('*1','')}` : 
+                           (cleanTel.length === 4 ? `tel:023147${cleanTel}` : `tel:${cleanTel}`);
+                n_html = `<span class="num-text ${isSpecial ? 'special-navy' : ''}">${disp_num}</span>`;
+                t_icon = `<a href="${t_url}" class="btn-icon">T</a>`;
+            }
+            let m_icon = r.hp && r.hp !== 'nan' ? `<a href="tel:${r.hp.replace(/[^0-9]/g, '')}" class="btn-icon btn-m">M</a>` : "";
+
+            container.insertAdjacentHTML('beforeend', `
+                <div class="phone-item">
+                    <div class="top-line">
+                        <div class="name-area"><div class="name-text">${d_name}</div></div>
+                        <div class="num-area">${n_html}</div>
+                        <div class="icon-area">${t_icon}${m_icon}</div>
+                    </div>
+                    <div class="bottom-line"><div class="work-text">${d_work}</div></div>
+                </div>`);
+        });
+    }
+
+    function filterTab(tabName) {
+        currentTab = tabName;
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.innerText === tabName));
+        renderList();
+    }
+
+    document.getElementById('search-input').addEventListener('input', renderList);
+    window.onload = loadData;
+</script>
+</body>
+</html>
