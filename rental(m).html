@@ -17,7 +17,7 @@
         .bu-chip.active { background-color: #1E3A5F; color: white; border-color: #1E3A5F; font-weight: 800; }
         .rental-card { border: 1.2px solid #e2e8f0; background: white; border-radius: 0.75rem; }
         .status-badge { font-weight: 800; padding: 1px 6px; border-radius: 4px; font-size: 10px; border-width: 1px; }
-        .type-header { font-size: 11px; font-weight: 900; display: flex; align-items: center; gap: 4px; margin-bottom: 6px; margin-left: 4px; }
+        .type-header { font-size: 11px; font-weight: 900; display: center; align-items: center; gap: 4px; margin-bottom: 6px; margin-left: 4px; }
         .empty-box { border: 1.5px dashed #cbd5e1; border-radius: 0.75rem; padding: 1.25rem; text-align: center; color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 1rem; background-color: #ffffff; }
         .ctrl-item { display: flex; align-items: center; justify-content: center; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; font-weight: 900; font-size: 10px; color: #64748b; transition: all 0.2s; white-space: nowrap; }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
@@ -54,7 +54,7 @@
                     <span id="statusDot" class="status-dot dot-offline"></span>
                     <span id="statusText" class="uppercase">WAIT</span>
                 </div>
-                <button onclick="loadData(true)" class="ctrl-item ctrl-action">
+                <button onclick="fetchOnlineData()" class="ctrl-item ctrl-action">
                     <span class="mr-1">🔄</span>동기화
                 </button>
             </div>
@@ -88,47 +88,46 @@
         let currentDate = new Date();
         let fp;
 
-        // 핵심 수정: 오프라인 우선 로직
-        async function loadData(isManual = false) {
-            const dot = document.getElementById('statusDot');
-            const txt = document.getElementById('statusText');
-            const loading = document.getElementById('loading');
-
-            // 1. 우선 스마트폰 내 장부(localStorage)에서 즉시 데이터를 읽어 화면에 표시
+        // 1. 초기 실행 로직 (로컬 먼저, 그 다음 온라인 자동 시도)
+        async function initApp() {
+            // 로컬 캐시 먼저 로드
             const backup = localStorage.getItem("rental_db_cache");
             if (backup) {
                 allData = JSON.parse(backup);
-                updateStatusUI(false, "CACHED", "dot-cached"); // 주황색 점 표시
+                updateStatusUI(false, "CACHED", "dot-cached");
+                document.getElementById('loading').classList.add('hidden');
                 updateDisplay();
-                loading.classList.add('hidden');
             }
+            
+            // 캐시 유무와 상관없이 온라인 최신화 시도
+            await fetchOnlineData(false);
+        }
 
-            // 2. '동기화' 버튼을 눌렀을 때만 구글 시트에서 최신 데이터를 가져옴
-            if (isManual) {
-                txt.innerText = "SYNCING";
-                dot.className = "status-dot dot-offline";
+        // 2. 온라인 데이터 전용 함수
+        async function fetchOnlineData(isAlert = true) {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            
+            txt.innerText = "SYNCING";
+            dot.className = "status-dot dot-offline";
+
+            try {
+                const res = await fetch(`${GAS_URL}?t=${new Date().getTime()}`);
+                if (!res.ok) throw new Error("Network response was not ok");
                 
-                try {
-                    // 인터넷 연결 시도 (3초 타임아웃 설정으로 무한 로딩 방지)
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-                    const res = await fetch(`${GAS_URL}?t=${new Date().getTime()}`, { signal: controller.signal });
-                    const data = await res.json();
-                    
-                    clearTimeout(timeoutId);
-
-                    if (data && data.length > 0) {
-                        allData = data;
-                        localStorage.setItem("rental_db_cache", JSON.stringify(data));
-                        updateStatusUI(true, "ONLINE", "dot-online");
-                        updateDisplay();
-                        alert("최신 정보로 동기화되었습니다.");
-                    }
-                } catch (e) {
-                    updateStatusUI(false, "OFFLINE", "dot-offline");
-                    alert("인터넷 연결이 원활하지 않습니다.\n오프라인 모드로 표시됩니다.");
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    allData = data;
+                    localStorage.setItem("rental_db_cache", JSON.stringify(data));
+                    updateStatusUI(true, "ONLINE", "dot-online");
+                    document.getElementById('loading').classList.add('hidden');
+                    updateDisplay();
+                    if(isAlert) alert("최신 정보로 업데이트되었습니다.");
                 }
+            } catch (e) {
+                console.error("Fetch Error:", e);
+                updateStatusUI(false, "OFFLINE", "dot-offline");
+                if(isAlert) alert("데이터를 불러오는 데 실패했습니다. 인터넷 상태를 확인해주세요.");
             }
         }
 
@@ -140,20 +139,21 @@
             txt.className = `uppercase font-bold ${isOnline ? 'text-emerald-500' : (msg === 'CACHED' ? 'text-amber-500' : 'text-red-500')}`;
         }
 
-        // 근무조 및 날짜 표시 로직 (기존 유지)
         function updateDisplay() {
             const yyyy = currentDate.getFullYear();
             const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
             const dd = String(currentDate.getDate()).padStart(2, '0');
             const dateStr = `${yyyy}-${mm}-${dd}`;
+            
             if(fp) fp.setDate(currentDate, false);
+            
             const pickerInput = document.getElementById('datePicker');
             pickerInput.classList.remove('day-sun', 'day-sat');
             const day = currentDate.getDay();
             if(day === 0 || HOLIDAYS.includes(dateStr)) pickerInput.classList.add('day-sun');
             else if(day === 6) pickerInput.classList.add('day-sat');
             
-            // C조 패턴 계산 (2026-03-09 기준)
+            // 근무조 패턴
             const baseDate = new Date('2026-03-09').setHours(0,0,0,0);
             const targetDate = new Date(dateStr).setHours(0,0,0,0);
             const diff = Math.round((targetDate - baseDate) / 86400000);
@@ -161,6 +161,7 @@
             const shift = patterns[((diff % 3) + 3) % 3];
             document.getElementById('shiftBadge').innerText = `${shift.n}조 근무`;
             document.getElementById('shiftBadge').style.backgroundColor = shift.c;
+            
             renderRental(dateStr);
         }
 
@@ -168,13 +169,17 @@
             const listArea = document.getElementById('listArea');
             listArea.innerHTML = "";
             if (selectedBu.length === 0) { listArea.innerHTML = '<div class="empty-box">건물을 선택해주세요.</div>'; return; }
+            
             selectedBu.forEach(buName => {
                 if (buName === "전체") return;
                 const searchBu = buName === "의산연" ? "의생명산업연구원" : buName;
-                const buFiltered = allData.filter(r => r.rawDate === selectedDate && r.bu.includes(searchBu));
+                const buFiltered = allData.filter(r => r.rawDate === selectedDate && (r.bu && r.bu.includes(searchBu)));
+                
                 let buHtml = `<div class="mb-5"><div class="flex items-center gap-1.5 px-1 font-black text-[15px] text-[#1E3A5F] mb-2"><span class="w-1 h-3.5 bg-[#1E3A5F] rounded-full"></span>${buName}</div>`;
-                if (buFiltered.length === 0) { buHtml += `<div class="empty-box">대관 내역이 없습니다.</div>`; }
-                else {
+                
+                if (buFiltered.length === 0) { 
+                    buHtml += `<div class="empty-box">대관 내역이 없습니다.</div>`; 
+                } else {
                     const daily = buFiltered.filter(r => r.type === '당일');
                     const periodic = buFiltered.filter(r => r.type === '기간');
                     if(daily.length > 0) {
@@ -221,6 +226,7 @@
                 locale: "ko", dateFormat: "Y.m.d (D)", defaultDate: new Date(), disableMobile: "true",
                 onChange: (selectedDates) => { if(selectedDates.length > 0) { currentDate = selectedDates[0]; updateDisplay(); } }
             });
+
             const container = document.getElementById('buContainer');
             BUILDINGS.forEach(bu => {
                 const chip = document.createElement('div');
@@ -243,8 +249,8 @@
                 container.appendChild(chip);
             });
 
-            // 초기 로딩 시 Manual=false로 실행하여 캐시만 읽음
-            loadData(false);
+            // 초기화 시작
+            initApp();
         };
     </script>
 </body>
