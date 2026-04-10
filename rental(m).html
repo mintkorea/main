@@ -17,7 +17,7 @@
         .bu-chip.active { background-color: #1E3A5F; color: white; border-color: #1E3A5F; font-weight: 800; }
         .rental-card { border: 1.2px solid #e2e8f0; background: white; border-radius: 0.75rem; }
         .status-badge { font-weight: 800; padding: 1px 6px; border-radius: 4px; font-size: 10px; border-width: 1px; }
-        .type-header { font-size: 11px; font-weight: 900; display: center; align-items: center; gap: 4px; margin-bottom: 6px; margin-left: 4px; }
+        .type-header { font-size: 11px; font-weight: 900; display: flex; align-items: center; gap: 4px; margin-bottom: 6px; margin-left: 4px; }
         .empty-box { border: 1.5px dashed #cbd5e1; border-radius: 0.75rem; padding: 1.25rem; text-align: center; color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 1rem; background-color: #ffffff; }
         .ctrl-item { display: flex; align-items: center; justify-content: center; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; font-weight: 900; font-size: 10px; color: #64748b; transition: all 0.2s; white-space: nowrap; }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
@@ -26,13 +26,32 @@
         .dot-cached { background-color: #F59E0B; box-shadow: 0 0 4px #F59E0B; }
         .ctrl-action { color: #1E3A5F; border-color: #1E3A5F; cursor: pointer; }
         .flatpickr-input-custom { background-color: white; border: 2px solid white; border-radius: 1rem; height: 3.2rem; width: 100%; max-width: 260px; text-align: center; font-weight: 900; font-size: 1.125rem; color: #1E3A5F; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; }
-        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: white; border-top: 1px solid #e2e8f0; display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* 하단 플로팅 바 PC 대응 수정 */
+        .nav-bar { 
+            position: fixed; 
+            bottom: 0; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 100%;
+            max-width: 42rem; /* Tailwind의 max-w-2xl과 동일 */
+            height: 60px; 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(8px);
+            border-top: 1px solid #e2e8f0; 
+            display: flex; 
+            z-index: 100; 
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
         .nav-label { font-size: 10px; font-weight: 900; color: #64748b; }
         .nav-label.active { color: #1E3A5F; }
+        .nav-icon { font-size: 16px; margin-bottom: -2px; }
     </style>
 </head>
-<body class="text-slate-800 pb-20">
+<body class="text-slate-800 pb-24">
     <div id="app" class="max-w-2xl mx-auto flex flex-col items-center p-2 pt-3">
         <div id="header" class="w-full bg-[#EEF2F6] rounded-2xl p-4 flex flex-col mb-3 border border-slate-200 shadow-sm items-center">
             <div class="flex items-center gap-2 mb-3">
@@ -71,12 +90,27 @@
         </div>
     </div>
 
-    <nav class="nav-bar shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-        <button onclick="moveDate(-1)" class="nav-item"><span class="nav-icon">◀</span><span class="nav-label">이전날</span></button>
-        <button onclick="moveDate(0)" class="nav-item"><span class="nav-icon">📅</span><span class="nav-label active">오늘</span></button>
-        <button onclick="moveDate(1)" class="nav-item"><span class="nav-icon">▶</span><span class="nav-label">다음날</span></button>
-        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-item"><span class="nav-icon">▲</span><span class="nav-label">맨위로</span></button>
-        <button onclick="document.getElementById('results-anchor').scrollIntoView({behavior:'smooth'})" class="nav-item"><span class="nav-icon">🔍</span><span class="nav-label">결과보기</span></button>
+    <nav class="nav-bar shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
+        <button onclick="moveDate(-1)" class="nav-item">
+            <span class="nav-icon">◀</span>
+            <span class="nav-label">이전날</span>
+        </button>
+        <button onclick="moveDate(0)" class="nav-item">
+            <span class="nav-icon">📅</span>
+            <span class="nav-label active">오늘</span>
+        </button>
+        <button onclick="moveDate(1)" class="nav-item">
+            <span class="nav-icon">▶</span>
+            <span class="nav-label">다음날</span>
+        </button>
+        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-item">
+            <span class="nav-icon">▲</span>
+            <span class="nav-label">맨위로</span>
+        </button>
+        <button onclick="document.getElementById('results-anchor').scrollIntoView({behavior:'smooth'})" class="nav-item">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-label">결과</span>
+        </button>
     </nav>
 
     <script>
@@ -88,9 +122,7 @@
         let currentDate = new Date();
         let fp;
 
-        // 1. 초기 실행 로직 (로컬 먼저, 그 다음 온라인 자동 시도)
         async function initApp() {
-            // 로컬 캐시 먼저 로드
             const backup = localStorage.getItem("rental_db_cache");
             if (backup) {
                 allData = JSON.parse(backup);
@@ -98,23 +130,17 @@
                 document.getElementById('loading').classList.add('hidden');
                 updateDisplay();
             }
-            
-            // 캐시 유무와 상관없이 온라인 최신화 시도
             await fetchOnlineData(false);
         }
 
-        // 2. 온라인 데이터 전용 함수
         async function fetchOnlineData(isAlert = true) {
             const dot = document.getElementById('statusDot');
             const txt = document.getElementById('statusText');
-            
             txt.innerText = "SYNCING";
             dot.className = "status-dot dot-offline";
-
             try {
                 const res = await fetch(`${GAS_URL}?t=${new Date().getTime()}`);
-                if (!res.ok) throw new Error("Network response was not ok");
-                
+                if (!res.ok) throw new Error("Network error");
                 const data = await res.json();
                 if (data && data.length > 0) {
                     allData = data;
@@ -125,9 +151,8 @@
                     if(isAlert) alert("최신 정보로 업데이트되었습니다.");
                 }
             } catch (e) {
-                console.error("Fetch Error:", e);
                 updateStatusUI(false, "OFFLINE", "dot-offline");
-                if(isAlert) alert("데이터를 불러오는 데 실패했습니다. 인터넷 상태를 확인해주세요.");
+                if(isAlert) alert("데이터 로드 실패.");
             }
         }
 
@@ -153,7 +178,6 @@
             if(day === 0 || HOLIDAYS.includes(dateStr)) pickerInput.classList.add('day-sun');
             else if(day === 6) pickerInput.classList.add('day-sat');
             
-            // 근무조 패턴
             const baseDate = new Date('2026-03-09').setHours(0,0,0,0);
             const targetDate = new Date(dateStr).setHours(0,0,0,0);
             const diff = Math.round((targetDate - baseDate) / 86400000);
@@ -248,8 +272,6 @@
                 };
                 container.appendChild(chip);
             });
-
-            // 초기화 시작
             initApp();
         };
     </script>
