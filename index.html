@@ -2,155 +2,359 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>성의교정 통합근무 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        :root {
+            --brand-navy: #2d3e75;
+            --brand-yellow: #facc15;
+            --bg-light: #f1f5f9;
+        }
+
         body { 
-            font-family: 'Pretendard', sans-serif; 
-            background-color: #f1f5f9; 
+            font-family: 'Pretendard', -apple-system, sans-serif; 
+            background-color: var(--bg-light); 
             color: #1e293b;
             letter-spacing: -0.03em;
-            -webkit-tap-highlight-color: transparent;
+            word-break: keep-all;
+            margin: 0;
+            padding: 0;
         }
-        /* 카드 사이 간격 최소화 */
-        .info-card {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            display: grid;
-            grid-template-columns: 50px 1fr;
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: var(--bg-light);
+        }
+
+        .brand-header {
+            background-color: var(--brand-navy);
+            padding: 24px 20px 30px 20px;
+            color: white;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 2px; /* 카드 사이 간격 거의 밀착 */
-            cursor: pointer;
-            border: 1px solid #e2e8f0;
+            display: flex;
+            margin: 0 12px 8px 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
-        .info-card:active {
+
+        .table-header {
+            width: 65px;
             background-color: #f8fafc;
-        }
-        .label-side {
-            background-color: #f8fafc;
-            color: #64748b;
-            font-size: 0.65rem;
-            font-weight: 800;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-weight: 800;
+            font-size: 0.75rem;
+            color: #6366f1;
+            border-right: 1px solid #f1f5f9;
+            flex-shrink: 0;
             text-align: center;
             line-height: 1.2;
-            border-right: 1px solid #f1f5f9;
         }
-        .content-side {
-            padding: 0;
+
+        .table-body {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .inner-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .inner-table th, .inner-table td {
+            padding: 10px 4px;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .inner-table th {
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.7rem;
+            border-bottom: 1px solid #f8fafc;
+        }
+
+        .inner-table td {
+            color: #334155;
+            font-weight: 500;
+        }
+
+        .badge-yellow {
+            background-color: var(--brand-yellow);
+            color: #1e293b;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 0.8rem;
+        }
+
+        .quick-btn {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 스크롤 및 레이아웃 최적화 */
+        #event-list {
+            max-height: 220px; 
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        #event-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .building-group {
+            margin-bottom: 8px;
+        }
+
+        .building-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .building-title {
+            font-size: 10px;
+            font-weight: 900;
+            color: #64748b;
+            background: #f8fafc;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+
+        .event-item {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
+            align-items: flex-start;
+            gap: 4px;
+            padding: 4px 4px;
+        }
+
+        .place-tag {
+            color: #2d3e75;
+            font-weight: 900;
+            font-size: 11px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            background: #eef2ff;
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+
+        .event-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #334155;
+            line-height: 1.4;
         }
     </style>
 </head>
-<body class="p-2">
+<body>
 
-    <div class="max-w-md mx-auto">
+    <div class="app-container">
         
-        <!-- 상단 헤더 -->
-        <header class="bg-[#003d7a] p-3 text-white rounded-t-xl flex justify-between items-center shadow-sm">
-            <div>
-                <h1 class="text-sm font-bold tracking-tight">성의교정 통합근무</h1>
-                <p class="text-[9px] opacity-70 font-medium">2026. 4. 12 (일)</p>
-            </div>
-            <div class="text-right">
-                <span class="bg-yellow-400 text-blue-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm">A조 근무중</span>
-            </div>
-        </header>
-
-        <!-- 퀵 메뉴 -->
-        <div class="grid grid-cols-3 bg-white border-x border-b border-gray-100 rounded-b-xl shadow-sm mb-2 font-bold text-gray-500 overflow-hidden">
-            <a href="calendar.html" class="py-2.5 text-[11px] border-r border-gray-50 flex items-center justify-center gap-1 active:bg-gray-50">
-                🗓️ 근무달력
-            </a>
-            <a href="yellowpage.html" class="py-2.5 text-[11px] border-r border-gray-50 flex items-center justify-center gap-1 active:bg-gray-50">
-                📞 연락처
-            </a>
-            <a href="rentalm.html" class="py-2.5 text-[11px] flex items-center justify-center gap-1 active:bg-gray-50">
-                🏥 시설안내
-            </a>
-        </div>
-
-        <!-- 메인 정보 영역: 카드형 배치 (간격 2px) -->
-        
-        <!-- 근무현황 카드 -->
-        <div class="info-card" onclick="location.href='team.html'">
-            <div class="label-side text-blue-600">근무<br>현황</div>
-            <div class="content-side">
-                <div class="grid grid-cols-5 text-[8.5px] bg-blue-50/20 font-bold text-gray-400 text-center border-b border-gray-50">
-                    <div class="py-0.5 border-r border-gray-50">월/일</div>
-                    <div class="col-span-2 py-0.5 border-r border-gray-50">성의회관</div>
-                    <div class="col-span-2 py-0.5">의산연</div>
+        <div class="brand-header">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-xl font-black mb-1">성의교정 통합근무</h1>
+                    <p id="today-display" class="text-sm opacity-80 font-medium">--</p>
                 </div>
-                <div class="grid grid-cols-5 text-[10.5px] text-center border-b border-gray-50">
-                    <div class="py-1.5 border-r border-gray-50 font-bold text-gray-400 bg-gray-50/20">4/14</div>
-                    <div class="py-1.5 border-r border-gray-50 font-semibold text-blue-700">황재업</div>
-                    <div class="py-1.5 border-r border-gray-50 text-gray-400">김태언</div>
-                    <div class="py-1.5 border-r border-gray-50 font-semibold text-green-700">이태원</div>
-                    <div class="py-1.5 text-gray-400">이정석</div>
-                </div>
-                <div class="grid grid-cols-5 text-[10.5px] text-center">
-                    <div class="py-1.5 border-r border-gray-50 font-bold text-gray-400 bg-gray-50/20">4/17</div>
-                    <div class="py-1.5 border-r border-gray-50 font-semibold text-blue-700">황재업</div>
-                    <div class="py-1.5 border-r border-gray-50 text-gray-400">김태언</div>
-                    <div class="py-1.5 border-r border-gray-50 font-semibold text-green-700">이정석</div>
-                    <div class="py-1.5 text-gray-400">이태원</div>
-                </div>
+                <div id="shift-badge" class="badge-yellow">--조 근무중</div>
             </div>
         </div>
 
-        <!-- 오늘행사 카드 -->
-        <div class="info-card" onclick="location.href='rentalm.html'">
-            <div class="label-side text-indigo-600">오늘<br>행사</div>
-            <div class="content-side">
-                <div class="p-1.5 border-b border-gray-50 flex items-center gap-2">
-                    <span class="text-[8px] bg-blue-100 text-blue-700 px-1 rounded font-bold shrink-0">성의</span>
-                    <p class="text-[10.5px] font-medium text-gray-700 truncate">신장내과 연수교육 <span class="text-gray-400 font-normal">(마리아홀)</span></p>
-                </div>
-                <div class="p-1.5 flex items-center gap-2">
-                    <span class="text-[8px] bg-green-100 text-green-700 px-1 rounded font-bold shrink-0">의산</span>
-                    <p class="text-[10.5px] font-medium text-gray-700 truncate">SNUC보철 세미나 강연 <span class="text-gray-400 font-normal">(1002호)</span></p>
-                </div>
+        <div class="grid grid-cols-3 gap-2 px-3 -mt-4 mb-4">
+            <div class="quick-btn">
+                <span class="block text-lg mb-0.5">📅</span>
+                <span class="text-[11px] font-bold text-slate-600">근무달력</span>
+            </div>
+            <div class="quick-btn">
+                <span class="block text-lg mb-0.5">📞</span>
+                <span class="text-[11px] font-bold text-slate-600">연락처</span>
+            </div>
+            <div class="quick-btn">
+                <span class="block text-lg mb-0.5">🏥</span>
+                <span class="text-[11px] font-bold text-slate-600">시설안내</span>
             </div>
         </div>
 
-        <!-- 최신공지 카드 (두 줄 높이로 압축) -->
-        <div class="info-card border-red-100" onclick="location.href='notice.html'">
-            <div class="label-side text-red-500 font-black">최신<br>공지</div>
-            <div class="content-side bg-red-50/30 px-3 py-1.5">
-                <p class="text-[10.5px] font-bold text-red-600 leading-[1.3]">
-                    시신기증 접수증 전송후 <span class="text-red-800 underline decoration-red-200">반드시 통화할 것</span><br>
-                    <span class="text-[9px] font-normal text-red-400">(즉시모심, 삼일장 모두 해당)</span>
-                </p>
+        <div class="table-card">
+            <div class="table-header">근무<br>예정</div>
+            <div class="table-body">
+                <table class="inner-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 22%;">월/일</th>
+                            <th style="width: 39%;">성의회관</th>
+                            <th style="width: 39%;">의산연</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-bold">
+                        <tr>
+                            <td>4/14</td>
+                            <td class="text-slate-400">황재업 김태언</td>
+                            <td class="text-slate-400">이태원 이정석</td>
+                        </tr>
+                        <tr>
+                            <td>4/17</td>
+                            <td class="text-slate-400">황재업 김태언</td>
+                            <td class="text-slate-400">이정석 이태원</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- 오늘식단 카드 -->
-        <div class="info-card" onclick="location.href='meal.html'">
-            <div class="label-side text-orange-600">오늘<br>식단</div>
-            <div class="content-side flex-row divide-x divide-gray-50">
-                <div class="flex-1 p-1.5 flex items-center gap-2">
-                    <span class="text-[8px] font-bold text-gray-400">중식</span>
-                    <span class="text-[10.5px] font-bold text-gray-700">제육볶음</span>
+        <!-- 오늘행사 섹션 (건물별 그룹화 적용) -->
+        <div class="table-card">
+            <div class="table-header">오늘<br>행사</div>
+            <div id="event-list" class="table-body p-3">
+                <div class="text-[11px] text-slate-400 text-center py-2 font-bold">행사 데이터를 불러오는 중...</div>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="table-header">최신<br>공지</div>
+            <div class="table-body p-3">
+                <div class="text-[12px] font-black text-red-500 mb-0.5">시신기증 접수증 전송후 반드시 통화할 것</div>
+                <div class="text-[11px] font-bold text-red-300">(즉시모심, 삼일장 모두 해당)</div>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="table-header">오늘<br>식단</div>
+            <div class="table-body flex divide-x divide-slate-50">
+                <div class="flex-1 p-2 text-center">
+                    <span class="block text-[10px] font-bold text-slate-300">중식</span>
+                    <span id="lunch-menu" class="text-[13px] font-black text-slate-700">--</span>
                 </div>
-                <div class="flex-1 p-1.5 flex items-center gap-2">
-                    <span class="text-[8px] font-bold text-gray-400">야식</span>
-                    <span class="text-[10.5px] font-bold text-gray-700 text-purple-700">바베큐치밥</span>
+                <div class="flex-1 p-2 text-center">
+                    <span class="block text-[10px] font-bold text-slate-300">야식</span>
+                    <span id="night-menu" class="text-[13px] font-black text-indigo-500">--</span>
                 </div>
             </div>
         </div>
 
+        <footer class="mt-4 text-center pb-10">
+            <p class="text-[9px] text-slate-300 font-bold tracking-widest opacity-60 uppercase">Catholic Medical Campus - Duty System</p>
+        </footer>
     </div>
 
-    <footer class="mt-4 text-center pb-4">
-        <p class="text-[8px] text-gray-300 tracking-tight font-medium uppercase">Catholic Medical Campus - Duty System</p>
-    </footer>
+    <script>
+        const CONFIG = {
+            baseDate: '2026-03-09',
+            patterns: ['C', 'A', 'B'],
+            eventUrl: "https://script.google.com/macros/s/AKfycbzKtqrzNK11rX4sCdDFv0lcgUcdVwsNiUnlXYc8Zjm0dJNlNV8ThwKrtqOgKBeVrP3g/exec",
+            mealUrl: "https://script.google.com/macros/s/AKfycbxZkcn8EEcGcxMaT98l_CKJTCM_0Ual_S2JefpHptm_dbEtQ5tjM00TEhU2XdqTObLh/exec"
+        };
 
+        function getShift(d) {
+            const base = new Date(CONFIG.baseDate); base.setHours(0,0,0,0);
+            const target = new Date(d); target.setHours(0,0,0,0);
+            const diff = Math.round((target - base) / 86400000);
+            return CONFIG.patterns[((diff % 3) + 3) % 3];
+        }
+
+        function updateUI() {
+            const now = new Date();
+            document.getElementById('today-display').innerText = now.toLocaleDateString('ko-KR', { year:'numeric', month:'numeric', day:'numeric', weekday:'short' });
+            const shift = getShift(now);
+            document.getElementById('shift-badge').innerText = `${shift}조 근무중`;
+        }
+
+        async function updateEvents() {
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const eventContainer = document.getElementById('event-list');
+
+            try {
+                const res = await fetch(`${CONFIG.eventUrl}?t=${new Date().getTime()}`);
+                const data = await res.json();
+                
+                const sunguiEvents = data.filter(r => r.rawDate === todayStr && r.bu.includes("성의회관"));
+                const uisanEvents = data.filter(r => r.rawDate === todayStr && r.bu.includes("의생명산업연구원"));
+
+                if (sunguiEvents.length === 0 && uisanEvents.length === 0) {
+                    eventContainer.innerHTML = `<div class="text-[11px] text-slate-400 text-center py-2 font-bold">오늘 대관 내역이 없습니다.</div>`;
+                    return;
+                }
+
+                let htmlContent = "";
+
+                // 1. 성의회관 그룹
+                if (sunguiEvents.length > 0) {
+                    htmlContent += `<div class="building-group">
+                        <div class="building-title">성의회관</div>
+                        ${sunguiEvents.map(item => `
+                            <div class="event-item">
+                                <span class="place-tag">${item.place}</span>
+                                <span class="event-name">${item.event}</span>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                }
+
+                // 2. 의산연 그룹
+                if (uisanEvents.length > 0) {
+                    htmlContent += `<div class="building-group ${sunguiEvents.length > 0 ? 'mt-4 border-t border-slate-50 pt-2' : ''}">
+                        <div class="building-title">의산연</div>
+                        ${uisanEvents.map(item => `
+                            <div class="event-item">
+                                <span class="place-tag">${item.place}</span>
+                                <span class="event-name">${item.event}</span>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                }
+
+                eventContainer.innerHTML = htmlContent;
+
+            } catch (e) {
+                eventContainer.innerHTML = `<div class="text-[11px] text-red-400 text-center py-2 font-bold">데이터 로드 실패</div>`;
+            }
+        }
+
+        async function updateMeal() {
+            const now = new Date();
+            const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            try {
+                const res = await fetch(CONFIG.mealUrl);
+                const data = await res.json();
+                const day = data[key];
+                if(day) {
+                    document.getElementById('lunch-menu').innerText = (day["중식"] || day["중 식"])?.menu.split('(')[0] || "미등록";
+                    document.getElementById('night-menu').innerText = (day["야식"] || day["야 식"])?.menu.split('(')[0] || "미등록";
+                } else {
+                    document.getElementById('lunch-menu').innerText = "정보없음";
+                    document.getElementById('night-menu').innerText = "정보없음";
+                }
+            } catch(e) { 
+                document.getElementById('lunch-menu').innerText = "오류";
+                document.getElementById('night-menu').innerText = "오류";
+            }
+        }
+
+        window.onload = () => {
+            updateUI();
+            updateEvents();
+            updateMeal();
+        };
+    </script>
 </body>
 </html>
