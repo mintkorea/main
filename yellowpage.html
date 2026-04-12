@@ -75,10 +75,6 @@
     </div>
 
     <div id="admin-view">
-        <div style="background:#f1f5f9; padding:15px; border-radius:10px; margin-bottom:15px;">
-            <strong>☁️ 데이터 동기화</strong>
-            <button onclick="syncWithGoogleSheet()" class="btn-sync" style="margin-top:10px;">구글 시트에서 가져오기</button>
-        </div>
         <div class="table-wrapper">
             <table>
                 <thead><tr style="background:#f8fafc;"><th>구분</th><th>부서명</th><th>담당자</th><th>전화</th><th>휴대폰</th><th>비고</th><th>keyword</th><th>삭제</th></tr></thead>
@@ -128,7 +124,6 @@
     }
 
     async function syncWithGoogleSheet(isAuto = false) {
-        if (!isAuto && !confirm("데이터를 동기화하시겠습니까?")) return;
         try {
             const response = await fetch(SHEET_URL);
             const csvText = await response.text();
@@ -164,9 +159,6 @@
 
         // 1. 필터링 로직
         let filtered = allData.filter(item => {
-            // [강력 제약] 부서명에 "팀"이 들어가면 사용자 리스트에서 완전히 제외 (모든 팀원 정보 배제)
-            if (item.dept && item.dept.includes("팀")) return false;
-
             const tabMatch = (currentTab === "전체") || (item.cat && item.cat.includes(currentTab));
             if (!tabMatch) return false;
             if (!query) return true;
@@ -177,41 +169,39 @@
             const keyword = (item.keyword || "").toLowerCase();
             const queryCho = getChosung(query);
 
-            // [수정] 부서명(dept)의 초성 검색은 체크박스가 켜졌을 때만 허용
-            const deptMatch = dept.includes(query) || (deptOnly && getChosung(dept).includes(queryCho));
-            
-            return name.includes(query) || getChosung(name).includes(queryCho) || 
-                   deptMatch ||
-                   work.includes(query) || getChosung(work).includes(queryCho) ||
-                   keyword.includes(query) || getChosung(keyword).includes(queryCho);
+            // 일반 텍스트 매칭
+            const textMatch = name.includes(query) || dept.includes(query) || work.includes(query) || keyword.includes(query);
+            if (textMatch) return true;
+
+            // 초성 검색 로직
+            const nameCho = getChosung(name).includes(queryCho);
+            const workCho = getChosung(work).includes(queryCho);
+            const keyCho = getChosung(keyword).includes(queryCho);
+            const deptCho = getChosung(dept).includes(queryCho);
+
+            if (deptOnly) {
+                return deptCho;
+            } else {
+                // 부서명(팀명) 초성만 매칭된 경우는 결과에서 배제 (이름/업무/키워드 매칭 시에만 통과)
+                return nameCho || workCho || keyCho;
+            }
         });
 
-        // 2. 정렬 로직 (탭 순서 최우선)
+        // 2. 정렬 (탭 우선순위)
         filtered.sort((a, b) => {
-            const getRank = (c) => { 
-                for(let k in tabPriority) { if(c.includes(k)) return tabPriority[k]; } 
-                return 99; 
-            };
+            const getRank = (c) => { for(let k in tabPriority) { if(c.includes(k)) return tabPriority[k]; } return 99; };
             const rA = getRank(a.cat), rB = getRank(b.cat);
             if (rA !== rB) return rA - rB;
-
-            if (query) {
-                const aKeyMatch = (a.keyword + a.work).includes(query) ? 0 : 1;
-                const bKeyMatch = (b.keyword + b.work).includes(query) ? 0 : 1;
-                if (aKeyMatch !== bKeyMatch) return aKeyMatch - bKeyMatch;
-            }
-
-            const nA = parseInt(a.cat.replace(/[^0-9]/g, "")) || 0;
-            const nB = parseInt(b.cat.replace(/[^0-9]/g, "")) || 0;
-            if (nA !== nB) return nA - nB;
-
             return new Intl.Collator('ko', {numeric: true}).compare(a.dept, b.dept);
         });
 
         // 3. 렌더링
         filtered.forEach(r => {
+            // 소속 확인을 위해 부서명과 이름을 항상 모두 표시 (팀명 제외 로직 삭제)
+            let displayName = r.name ? r.dept + ' ' + r.name : r.dept;
+
             let displayNum = (r.tel||"").replace('02-3147-','').replace('02-2258-','');
-            const rawHp = (r.hp || "").replace(/[^0-9]/g, "");
+            const rawHp = (r.hp || "").replace(/[^0-9/]/g, "");
             if (!displayNum && rawHp) displayNum = r.hp;
             const getStyled = (s) => (s.includes('*1') || s.includes('2258')) ? `<span class="highlight-num">${s}</span>` : s;
             
@@ -229,7 +219,7 @@
                 <div class="phone-item">
                     <div class="info-area">
                         <div class="top-row">
-                            <div class="name-area">${r.name ? r.dept+' '+r.name : r.dept}</div>
+                            <div class="name-area">${displayName}</div>
                             <div class="num-area">${getStyled(displayNum)}</div>
                         </div>
                         ${r.work ? `<div class="work-text">${r.work}</div>` : ''}
@@ -248,12 +238,10 @@
             tx.oncomplete = () => res();
         });
     }
-
     function clearSearch() { document.getElementById('search-input').value = ""; renderList(); }
     function filterTab(t) { currentTab = t; document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.innerText === t)); renderList(); }
     document.getElementById('search-input').addEventListener('input', renderList);
     function checkAdminPw() { if (prompt("비밀번호") === "1234") { document.getElementById('user-view').style.display='none'; document.getElementById('admin-view').style.display='block'; renderAdminTable(); } }
-
     function renderAdminTable() {
         const tbody = document.getElementById('admin-table-body');
         tbody.innerHTML = "";
