@@ -1,7 +1,7 @@
 {
   "name": "성의교정 주요전화",
   "short_name": "성의전화",
-  "start_url": "/index.html",
+  "start_url": "/yellowpage.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1e3a8a",
