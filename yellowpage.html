@@ -7,41 +7,33 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <style>
+        /* 스타일 부분은 동일하므로 중복 방지를 위해 핵심 구조 유지 */
         * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
         body { background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; -webkit-tap-highlight-color: transparent; }
         .container { max-width: 600px; margin: 0 auto; background: white; min-height: 100vh; padding: 12px; position: relative; }
         .app-title { font-weight: 900; color: #1e3a8a; font-size: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
-        
         .search-area { background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
         .search-container { position: relative; width: 100%; margin-bottom: 8px; }
-        .search-box { width: 100%; padding: 12px 40px 12px 14px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 16px; outline: none; transition: all 0.2s; }
-        .search-box:focus { border-color: #1e3a8a; background: white; }
-        .clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #94a3b8; color: white; border-radius: 50%; border: none; font-size: 14px; display: none; align-items: center; justify-content: center; cursor: pointer; }
-        .option-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #475569; font-weight: 700; padding-left: 2px; }
-        
+        .search-box { width: 100%; padding: 12px 40px 12px 14px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 16px; outline: none; }
+        .clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #94a3b8; color: white; border-radius: 50%; border: none; display: none; align-items: center; justify-content: center; cursor: pointer; }
         .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 15px; }
         .tab { padding: 10px 0; background: #f1f5f9; border-radius: 6px; font-size: 13px; cursor: pointer; color: #64748b; font-weight: 700; text-align: center; }
         .tab.active { background: #1e3a8a; color: white; }
-        
         .phone-item { border-bottom: 1px solid #f1f5f9; padding: 12px 4px; display: flex; align-items: flex-start; }
         .info-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; justify-content: center; min-height: 28px; }
         .top-row { display: flex; align-items: center; justify-content: space-between; }
         .name-area { font-size: 15px; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
-        .num-area { font-size: 14px; font-weight: 800; color: #1e3a8a; text-align: right; margin-right: 12px; flex: 1; letter-spacing: -0.02em; min-width: 80px; }
+        .num-area { font-size: 14px; font-weight: 800; color: #1e3a8a; text-align: right; margin-right: 12px; flex: 1; min-width: 80px; }
         .highlight-num { color: #0ea5e9; font-style: italic; }
-        
         .icon-area { width: 64px; display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; align-self: center; }
         .btn-icon { text-decoration: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 800; font-size: 12px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; }
         .btn-m { background: #ecfdf5; color: #059669; border-color: #d1fae5; }
-        .btn-placeholder { width: 28px; }
         .work-text { font-size: 12px; color: #64748b; font-weight: 500; margin-top: 4px; }
-        
         #admin-view { display: none; padding-bottom: 80px; }
         .table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 900px; }
         th, td { border: 1px solid #e2e8f0; padding: 8px 4px; }
         .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; border-top: 2px solid #e2e8f0; display: flex; gap: 8px; max-width: 600px; margin: 0 auto; z-index: 100; }
-        .btn-sync { background:#4285f4; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; font-weight:bold; width: 100%; }
     </style>
 </head>
 <body>
@@ -157,7 +149,6 @@
         document.getElementById('clear-search').style.display = query ? "flex" : "none";
         container.innerHTML = "";
 
-        // 1. 필터링 로직
         let filtered = allData.filter(item => {
             const tabMatch = (currentTab === "전체") || (item.cat && item.cat.includes(currentTab));
             if (!tabMatch) return false;
@@ -169,37 +160,37 @@
             const keyword = (item.keyword || "").toLowerCase();
             const queryCho = getChosung(query);
 
-            // 일반 텍스트 매칭
             const textMatch = name.includes(query) || dept.includes(query) || work.includes(query) || keyword.includes(query);
             if (textMatch) return true;
 
-            // 초성 검색 로직
             const nameCho = getChosung(name).includes(queryCho);
             const workCho = getChosung(work).includes(queryCho);
             const keyCho = getChosung(keyword).includes(queryCho);
             const deptCho = getChosung(dept).includes(queryCho);
 
-            if (deptOnly) {
-                return deptCho;
-            } else {
-                // 부서명(팀명) 초성만 매칭된 경우는 결과에서 배제 (이름/업무/키워드 매칭 시에만 통과)
-                return nameCho || workCho || keyCho;
-            }
+            if (deptOnly) return deptCho;
+            return nameCho || workCho || keyCho;
         });
 
-        // 2. 정렬 (탭 우선순위)
+        // [핵심] 정렬 로직: 보안01, 보안02 등 숫자 우선 정렬 고정
         filtered.sort((a, b) => {
-            const getRank = (c) => { for(let k in tabPriority) { if(c.includes(k)) return tabPriority[k]; } return 99; };
+            const getRank = (c) => { 
+                for(let k in tabPriority) { if(c.includes(k)) return tabPriority[k]; } 
+                return 99; 
+            };
             const rA = getRank(a.cat), rB = getRank(b.cat);
             if (rA !== rB) return rA - rB;
+
+            // 동일 탭 내에서 숫자(보안01 등) 정렬
+            const numA = parseInt(a.cat.replace(/[^0-9]/g, "")) || 999;
+            const numB = parseInt(b.cat.replace(/[^0-9]/g, "")) || 999;
+            if (numA !== numB) return numA - numB;
+
             return new Intl.Collator('ko', {numeric: true}).compare(a.dept, b.dept);
         });
 
-        // 3. 렌더링
         filtered.forEach(r => {
-            // 소속 확인을 위해 부서명과 이름을 항상 모두 표시 (팀명 제외 로직 삭제)
             let displayName = r.name ? r.dept + ' ' + r.name : r.dept;
-
             let displayNum = (r.tel||"").replace('02-3147-','').replace('02-2258-','');
             const rawHp = (r.hp || "").replace(/[^0-9/]/g, "");
             if (!displayNum && rawHp) displayNum = r.hp;
