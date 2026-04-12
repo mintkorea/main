@@ -102,7 +102,6 @@
     const tabPriority = { "보안": 1, "시설": 2, "미화": 3, "총무": 4, "지원": 5, "기타": 6 };
     const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQpOX8Ll6no4uXd5jnK0umTY3U_eKZXcDK2z_f2EsxSQDuOqk4YGzNkULJn_WgjTFBUseCbl6smBh0Z/pub?gid=1424582869&single=true&output=csv";
 
-    // 초성 추출
     function getChosung(str) {
         if (!str) return "";
         const cho = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -115,7 +114,6 @@
         return result;
     }
 
-    // IndexedDB
     const dbName = "YellowPage_DB";
     let db;
     const request = indexedDB.open(dbName, 1);
@@ -145,7 +143,6 @@
             });
             await performSave();
             renderList();
-            if(!isAuto) alert("동기화 완료!");
         } catch (e) { console.error(e); }
     }
 
@@ -169,8 +166,12 @@
         document.getElementById('clear-search').style.display = query ? "flex" : "none";
         container.innerHTML = "";
 
-        // 1. 검색 필터링
+        // 1. 필터링 로직
         let filtered = allData.filter(item => {
+            // [수정] 부서명에 "보안팀" 글자가 포함된 항목만 결과에서 완전히 제외 (개인정보 보호)
+            // 하지만 옴니버스파크, 의산연본관 등 일반 시설은 노출됨
+            if (item.dept && item.dept.includes("보안팀")) return false;
+
             const tabMatch = (currentTab === "전체") || (item.cat && item.cat.includes(currentTab));
             if (!tabMatch) return false;
             if (!query) return true;
@@ -180,12 +181,6 @@
             const work = (item.work || "").toLowerCase();
             const keyword = (item.keyword || "").toLowerCase();
 
-            // 특수 초성 필터 (ㅂㅇ, ㅁㅎ, ㅊㅁ)
-            const queryCho = getChosung(query);
-            if (["ㅂㅇ", "ㅁㅎ", "ㅊㅁ"].includes(queryCho)) {
-                if (getChosung(dept).includes(queryCho) && !getChosung(name).includes(queryCho)) return false;
-            }
-
             if (deptOnly) return dept.includes(query) || getChosung(dept).includes(query);
 
             return name.includes(query) || getChosung(name).includes(query) || 
@@ -194,26 +189,18 @@
                    keyword.includes(query) || getChosung(keyword).includes(query);
         });
 
-        // 2. 정렬 로직 (보안01 우선 및 키워드 매칭 우선)
+        // 2. 정렬 로직 (에어컨 등 키워드 우선 + 보안시설 순서)
         filtered.sort((a, b) => {
             if (query) {
-                // 키워드/비고에 검색어가 포함된 시설팀 등을 최상단으로 (예: 에어컨)
                 const aKeyMatch = (a.keyword + a.work).includes(query) ? 0 : 1;
                 const bKeyMatch = (b.keyword + b.work).includes(query) ? 0 : 1;
                 if (aKeyMatch !== bKeyMatch) return aKeyMatch - bKeyMatch;
-
-                // 보안팀은 검색어에 '보안'이 포함되지 않은 경우 하단으로 밀기
-                const aIsSec = (a.dept.includes("보안") && !query.includes("보안")) ? 1 : 0;
-                const bIsSec = (b.dept.includes("보안") && !query.includes("보안")) ? 1 : 0;
-                if (aIsSec !== bIsSec) return aIsSec - bIsSec;
             }
 
-            // 탭 우선순위
             const getRank = (c) => { for(let k in tabPriority) if(c.includes(k)) return tabPriority[k]; return 99; };
             const rA = getRank(a.cat), rB = getRank(b.cat);
             if (rA !== rB) return rA - rB;
 
-            // '보안01' 등 숫자 정렬
             const nA = parseInt(a.cat.replace(/[^0-9]/g, "")) || 0;
             const nB = parseInt(b.cat.replace(/[^0-9]/g, "")) || 0;
             if (nA !== nB) return nA - nB;
@@ -223,16 +210,12 @@
 
         // 3. 렌더링
         filtered.forEach(r => {
-            const isSecurity = r.dept.includes("보안팀");
             let displayNum = (r.tel||"").replace('02-3147-','').replace('02-2258-','');
             const rawHp = (r.hp || "").replace(/[^0-9]/g, "");
-            
             if (!displayNum && rawHp) displayNum = r.hp;
-            if (isSecurity) displayNum = ""; // 보안팀 번호 숨김
 
             const getStyled = (s) => (s.includes('*1') || s.includes('2258')) ? `<span class="highlight-num">${s}</span>` : s;
 
-            // 전화 연결 링크 생성
             let callT = "";
             const rawT = (r.tel||"").replace(/[^0-9*]/g,'');
             if (rawT) {
