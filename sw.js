@@ -1,7 +1,7 @@
 const CACHE_NAME = 'contact-app-v1';
 const ASSETS = [
   '/',
-  '/index.html',
+  '/yellowpage.html',
   'https://cdnjs.cloudflare.com/ajax/libs/jschardet/3.0.0/jschardet.min.js',
   'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css'
 ];
