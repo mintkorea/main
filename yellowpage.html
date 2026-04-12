@@ -12,35 +12,26 @@
         body { background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; -webkit-tap-highlight-color: transparent; }
         .container { max-width: 600px; margin: 0 auto; background: white; min-height: 100vh; padding: 12px; position: relative; }
         .app-title { font-weight: 900; color: #1e3a8a; font-size: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
-        
-        /* 검색 영역 */
         .search-area { background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
         .search-container { position: relative; width: 100%; margin-bottom: 8px; }
         .search-box { width: 100%; padding: 12px 40px 12px 14px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 16px; outline: none; transition: all 0.2s; }
         .search-box:focus { border-color: #1e3a8a; background: white; }
         .clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #94a3b8; color: white; border-radius: 50%; border: none; font-size: 14px; display: none; align-items: center; justify-content: center; cursor: pointer; }
         .option-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #475569; font-weight: 700; padding-left: 2px; }
-        
-        /* 탭 메뉴 */
         .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 15px; }
         .tab { padding: 10px 0; background: #f1f5f9; border-radius: 6px; font-size: 13px; cursor: pointer; color: #64748b; font-weight: 700; text-align: center; }
         .tab.active { background: #1e3a8a; color: white; }
-        
-        /* 리스트 아이템 */
         .phone-item { border-bottom: 1px solid #f1f5f9; padding: 12px 4px; display: flex; align-items: flex-start; }
         .info-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; justify-content: center; min-height: 28px; }
         .top-row { display: flex; align-items: center; justify-content: space-between; }
         .name-area { font-size: 15px; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
         .num-area { font-size: 14px; font-weight: 800; color: #1e3a8a; text-align: right; margin-right: 12px; flex: 1; letter-spacing: -0.02em; min-width: 80px; }
-        .highlight-num { color: #0ea5e9; font-style: italic; } /* *1, 2258 스타일 */
-        
+        .highlight-num { color: #0ea5e9; font-style: italic; }
         .icon-area { width: 64px; display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; align-self: center; }
         .btn-icon { text-decoration: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 800; font-size: 12px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; }
         .btn-m { background: #ecfdf5; color: #059669; border-color: #d1fae5; }
         .btn-placeholder { width: 28px; }
         .work-text { font-size: 12px; color: #64748b; font-weight: 500; margin-top: 4px; }
-        
-        /* 관리자 뷰 */
         #admin-view { display: none; padding-bottom: 80px; }
         .table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 900px; }
@@ -104,7 +95,6 @@
     const tabPriority = { "보안": 1, "시설": 2, "미화": 3, "총무": 4, "지원": 5, "기타": 6 };
     const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQpOX8Ll6no4uXd5jnK0umTY3U_eKZXcDK2z_f2EsxSQDuOqk4YGzNkULJn_WgjTFBUseCbl6smBh0Z/pub?gid=1424582869&single=true&output=csv";
 
-    // 초성 추출 함수
     function getChosung(str) {
         if (!str) return "";
         const cho = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -117,7 +107,6 @@
         return result;
     }
 
-    // IndexedDB 설정
     const dbName = "YellowPage_DB";
     let db;
     const request = indexedDB.open(dbName, 1);
@@ -135,37 +124,21 @@
         };
     }
 
-    // CSV 데이터 동기화
     async function syncWithGoogleSheet(isAuto = false) {
         if (!isAuto && !confirm("최신 데이터로 동기화하시겠습니까?")) return;
         try {
             const response = await fetch(SHEET_URL);
             const csvText = await response.text();
             const lines = csvText.split(/\r?\n/).filter(l => l.trim());
-            
             allData = lines.slice(1).map(line => {
                 const c = splitCSVLine(line);
-                // 업로드하신 CSV 구조에 맞게 매핑
-                return { 
-                    cat: c[0]||"", 
-                    dept: c[1]||"", 
-                    name: c[2]||"", 
-                    tel: c[3]||"", 
-                    hp: c[4]||"", 
-                    work: c[5]||"", 
-                    keyword: c[6]||"" 
-                };
+                return { cat: c[0]||"", dept: c[1]||"", name: c[2]||"", tel: c[3]||"", hp: c[4]||"", work: c[5]||"", keyword: c[6]||"" };
             });
             await performSave();
             renderList();
-            if(!isAuto) alert("동기화 완료 (" + allData.length + "건)");
-        } catch (e) {
-            console.error(e);
-            if(!isAuto) alert("동기화 실패");
-        }
+        } catch (e) { console.error(e); }
     }
 
-    // CSV 파싱 (따옴표 내 쉼표 무시 로직)
     function splitCSVLine(line) {
         const result = [];
         let cur = '', inQuotes = false;
@@ -187,12 +160,20 @@
         container.innerHTML = "";
 
         const sorted = [...allData].sort((a, b) => {
+            // 1. 탭 대분류 우선순위
             const getTabRank = (cat) => {
                 for (let k in tabPriority) { if (cat.includes(k)) return tabPriority[k]; }
                 return 99;
             };
             const rA = getTabRank(a.cat), rB = getTabRank(b.cat);
             if (rA !== rB) return rA - rB;
+
+            // 2. 구분 필드에서 숫자 추출 (보안01, 보안02 등 정렬)
+            const numA = parseInt(a.cat.replace(/[^0-9]/g, "")) || 0;
+            const numB = parseInt(b.cat.replace(/[^0-9]/g, "")) || 0;
+            if (numA !== numB) return numA - numB;
+
+            // 3. 같은 숫자거나 숫자가 없는 경우 부서명 가나다순
             return new Intl.Collator('ko', {numeric: true}).compare(a.dept || "", b.dept || "");
         });
 
@@ -208,7 +189,6 @@
             const tel = (item.tel || "").replace(/[^0-9]/g, "");
             const hp = (item.hp || "").replace(/[^0-9]/g, "");
 
-            // 초성 검색 독립 필터링 (ㅂㅇ, ㅁㅎ, ㅊㅁ 등)
             const specialCho = ["ㅂㅇ", "ㅁㅎ", "ㅊㅁ"];
             const queryCho = getChosung(query);
             if (specialCho.includes(queryCho)) {
@@ -226,27 +206,18 @@
         }).forEach(r => {
             const dName = r.name ? `${r.dept} ${r.name}` : r.dept;
             const isSecurityTeam = r.dept && r.dept.replace(/\s/g, "").includes("보안팀"); 
-            
-            // 번호 가공 (화면 표시용)
             let displayNum = (r.tel||"").toString().replace('02-3147-','').replace('02-2258-','');
             const rawHp = (r.hp || "").toString().replace(/[^0-9]/g, "");
             if (!displayNum && rawHp) displayNum = r.hp;
-            
-            // [요청] 보안팀 번호 미노출 (이름 검색 시에도 번호는 숨김)
             if (isSecurityTeam) displayNum = ""; 
 
-            // [요청] *1, 2258 스타일링
             const getStyledNum = (numStr) => {
                 if (!numStr) return "";
-                if (numStr.includes('*1') || numStr.includes('2258')) {
-                    return `<span class="highlight-num">${numStr}</span>`;
-                }
+                if (numStr.includes('*1') || numStr.includes('2258')) return `<span class="highlight-num">${numStr}</span>`;
                 return numStr;
             };
 
-            // 버튼 로직 (M: 휴대폰, T: 일반전화)
             const mBtn = (rawHp.length > 5) ? `<a href="tel:${rawHp}" class="btn-icon btn-m">M</a>` : `<div class="btn-placeholder"></div>`;
-            
             let callLink = "";
             const rawTel = (r.tel || "").toString().replace(/[^0-9*]/g,'');
             if (rawTel) {
