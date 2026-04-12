@@ -8,6 +8,47 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sungui-duty-app';
+
+        // 실시간 공지사항 연동
+        async function initNoticeSync() {
+            await signInAnonymously(auth);
+            const noticesCol = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
+            
+            // 실시간 리스너 (RULE 2: 복합 쿼리 대신 간단한 쿼리 후 JS 처리)
+            onSnapshot(noticesCol, (snapshot) => {
+                const posts = snapshot.docs.map(doc => doc.data());
+                // 최신순 정렬
+                posts.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                
+                const latestNotice = posts[0];
+                const noticeContainer = document.getElementById('latest-notice-container');
+                
+                if (latestNotice) {
+                    noticeContainer.innerHTML = `
+                        <div class="text-[14px] font-black text-red-600 mb-1 line-clamp-1">${latestNotice.content}</div>
+                        <div class="text-[12px] font-bold text-slate-400">
+                            [${latestNotice.category}] ${latestNotice.author} · ${latestNotice.createdAt ? new Date(latestNotice.createdAt.seconds * 1000).toLocaleDateString() : '방금 전'}
+                        </div>
+                    `;
+                } else {
+                    noticeContainer.innerHTML = `<div class="text-[12px] font-bold text-slate-300">등록된 공지사항이 없습니다.</div>`;
+                }
+            }, (error) => console.error("Notice Sync Error:", error));
+        }
+
+        window.addEventListener('load', initNoticeSync);
+    </script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         
@@ -32,7 +73,6 @@
             padding-bottom: 20px;
         }
 
-        /* Header Section */
         .brand-header {
             background-color: var(--brand-navy);
             padding: 25px 20px 45px 20px;
@@ -57,7 +97,6 @@
             letter-spacing: -0.02em;
         }
 
-        /* Date Picker */
         .date-picker-container {
             margin-top: 8px;
         }
@@ -80,7 +119,6 @@
         .day-sun { color: #EF4444 !important; } 
         .day-sat { color: #3B82F6 !important; }
 
-        /* Quick Buttons */
         .quick-btn { 
             background: white; 
             padding: 12px; 
@@ -98,7 +136,6 @@
         .quick-btn:active { transform: scale(0.95); }
         .quick-btn span { font-weight: 800; font-size: 13px; color: #334155; }
 
-        /* Card Styles */
         .table-card {
             background: white; 
             border-radius: 8px; 
@@ -123,7 +160,6 @@
 
         .table-body { flex-grow: 1; padding: 12px; min-width: 0; }
 
-        /* Duty Table */
         .duty-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; }
         .duty-table th { color: #94a3b8; font-weight: 700; padding-bottom: 8px; font-size: 0.75rem; }
         .duty-table td { padding: 10px 4px; font-weight: 800; border-top: 1px solid #f1f5f9; }
@@ -142,7 +178,6 @@
             font-size: 0.75rem; 
         }
 
-        /* Event Styles */
         .building-group { margin-bottom: 12px; }
         .building-group:last-child { margin-bottom: 0; }
         
@@ -221,12 +256,11 @@
             </div>
         </a>
 
-        <!-- Notice Card -->
-        <a href="notice.html" class="table-card">
+        <!-- Notice Card (Firebase 연동) -->
+        <a href="notice.jsx" class="table-card">
             <div class="table-header label-notice">최신<br>공지</div>
-            <div class="table-body">
-                <div class="text-[14px] font-black text-red-600 mb-1">시신기증 접수증 전송후 반드시 통화</div>
-                <div class="text-[12px] font-bold text-red-400">(즉시모심, 삼일장 모두 해당)</div>
+            <div class="table-body" id="latest-notice-container">
+                <div class="text-[12px] text-slate-400 font-bold py-2">최신 공지를 확인 중...</div>
             </div>
         </a>
 
@@ -304,12 +338,6 @@
             updateMeal(currentDate);
         }
 
-        function moveDate(offset) {
-            if (offset === 0) currentDate = getKSTNow();
-            else currentDate.setDate(currentDate.getDate() + offset);
-            updateDisplay();
-        }
-
         function renderDutyPreview(startDate) {
             const tbody = document.getElementById('duty-preview-body');
             let results = [];
@@ -342,50 +370,19 @@
         async function updateEvents(date) {
             const container = document.getElementById('event-list');
             const url = "https://script.google.com/macros/s/AKfycbzKtqrzNK11rX4sCdDFv0lcgUcdVwsNiUnlXYc8Zjm0dJNlNV8ThwKrtqOgKBeVrP3g/exec";
-            
             try {
                 const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 const res = await fetch(`${url}?t=${Date.now()}`);
                 const data = await res.json();
-                
                 const hallEvents = data.filter(r => r.rawDate === dateStr && r.bu.includes("성의회관"));
                 const researchEvents = data.filter(r => r.rawDate === dateStr && r.bu.includes("의산연"));
-                
-                let html = "";
-
-                // 성의회관 배지 섹션
-                html += `<div class="building-group">`;
-                html += `<span class="building-badge badge-hall">성의회관</span>`;
-                if(hallEvents.length === 0) {
-                    html += `<div class="no-data">대관 내역이 없습니다.</div>`;
-                } else {
-                    html += hallEvents.map(item => `
-                        <div class="event-item">
-                            <span class="event-text"><span class="event-place">[${item.place}]</span>${item.event}</span>
-                        </div>
-                    `).join('');
-                }
+                let html = `<div class="building-group"><span class="building-badge badge-hall">성의회관</span>`;
+                html += hallEvents.length === 0 ? `<div class="no-data">대관 내역이 없습니다.</div>` : hallEvents.map(i => `<div class="event-item"><span class="event-text"><span class="event-place">[${i.place}]</span>${i.event}</span></div>`).join('');
+                html += `</div><div class="building-group"><span class="building-badge badge-research">의산연</span>`;
+                html += researchEvents.length === 0 ? `<div class="no-data">대관 내역이 없습니다.</div>` : researchEvents.map(i => `<div class="event-item"><span class="event-text"><span class="event-place">[${i.place}]</span>${i.event}</span></div>`).join('');
                 html += `</div>`;
-
-                // 의산연 배지 섹션
-                html += `<div class="building-group">`;
-                html += `<span class="building-badge badge-research">의산연</span>`;
-                if(researchEvents.length === 0) {
-                    html += `<div class="no-data">대관 내역이 없습니다.</div>`;
-                } else {
-                    html += researchEvents.map(item => `
-                        <div class="event-item">
-                            <span class="event-text"><span class="event-place">[${item.place}]</span>${item.event}</span>
-                        </div>
-                    `).join('');
-                }
-                html += `</div>`;
-
                 container.innerHTML = html;
-
-            } catch(e) { 
-                container.innerHTML = `<div class="text-[10px] text-red-400 text-center">정보 수신 실패</div>`; 
-            }
+            } catch(e) { container.innerHTML = `<div class="text-[10px] text-red-400 text-center">정보 수신 실패</div>`; }
         }
 
         async function updateMeal(date) {
@@ -400,21 +397,16 @@
             } catch(e) { }
         }
 
-        window.onload = () => {
+        window.addEventListener('DOMContentLoaded', () => {
             fp = flatpickr("#datePicker", {
                 locale: "ko", 
                 dateFormat: "Y.m.d (D)", 
                 defaultDate: currentDate, 
                 disableMobile: "true",
-                onChange: (selectedDates) => { 
-                    if(selectedDates.length > 0) { 
-                        currentDate = selectedDates[0]; 
-                        updateDisplay(); 
-                    } 
-                }
+                onChange: (selectedDates) => { if(selectedDates.length > 0) { currentDate = selectedDates[0]; updateDisplay(); } }
             });
             updateDisplay();
-        };
+        });
     </script>
 </body>
 </html>
