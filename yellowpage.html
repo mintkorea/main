@@ -12,7 +12,6 @@
         .container { max-width: 600px; margin: 0 auto; background: white; min-height: 100vh; padding: 12px; position: relative; }
         .app-title { font-weight: 900; color: #1e3a8a; font-size: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
         
-        /* 검색창 스타일 */
         .search-area { background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
         .search-container { position: relative; width: 100%; margin-bottom: 8px; }
         .search-box { width: 100%; padding: 12px 40px 12px 14px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 16px; outline: none; transition: all 0.2s; }
@@ -20,12 +19,10 @@
         .clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #94a3b8; color: white; border-radius: 50%; border: none; font-size: 14px; display: none; align-items: center; justify-content: center; cursor: pointer; }
         .option-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #475569; font-weight: 700; padding-left: 2px; }
         
-        /* 탭 스타일 */
         .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 15px; }
         .tab { padding: 10px 0; background: #f1f5f9; border-radius: 6px; font-size: 13px; cursor: pointer; color: #64748b; font-weight: 700; text-align: center; }
         .tab.active { background: #1e3a8a; color: white; }
         
-        /* 리스트 스타일 */
         .phone-item { border-bottom: 1px solid #f1f5f9; padding: 12px 4px; display: flex; align-items: flex-start; }
         .info-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; justify-content: center; min-height: 28px; }
         .top-row { display: flex; align-items: center; justify-content: space-between; }
@@ -39,7 +36,6 @@
         .btn-placeholder { width: 28px; }
         .work-text { font-size: 12px; color: #64748b; font-weight: 500; margin-top: 4px; }
         
-        /* 관리자 모드 */
         #admin-view { display: none; padding-bottom: 80px; }
         .table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 900px; }
@@ -166,10 +162,8 @@
         document.getElementById('clear-search').style.display = query ? "flex" : "none";
         container.innerHTML = "";
 
-        // 1. 필터링 로직
         let filtered = allData.filter(item => {
-            // [수정] 부서명에 "보안팀" 글자가 포함된 항목만 결과에서 완전히 제외 (개인정보 보호)
-            // 하지만 옴니버스파크, 의산연본관 등 일반 시설은 노출됨
+            // "보안팀"이라는 단어가 부서명에 직접 포함된 경우만 제외
             if (item.dept && item.dept.includes("보안팀")) return false;
 
             const tabMatch = (currentTab === "전체") || (item.cat && item.cat.includes(currentTab));
@@ -180,42 +174,36 @@
             const dept = (item.dept || "").toLowerCase();
             const work = (item.work || "").toLowerCase();
             const keyword = (item.keyword || "").toLowerCase();
+            const queryCho = getChosung(query);
 
-            if (deptOnly) return dept.includes(query) || getChosung(dept).includes(query);
+            if (deptOnly) return dept.includes(query) || getChosung(dept).includes(queryCho);
 
-            return name.includes(query) || getChosung(name).includes(query) || 
-                   dept.includes(query) || getChosung(dept).includes(query) ||
-                   work.includes(query) || getChosung(work).includes(query) ||
-                   keyword.includes(query) || getChosung(keyword).includes(query);
+            return name.includes(query) || getChosung(name).includes(queryCho) || 
+                   dept.includes(query) || getChosung(dept).includes(queryCho) ||
+                   work.includes(query) || getChosung(work).includes(queryCho) ||
+                   keyword.includes(query) || getChosung(keyword).includes(queryCho);
         });
 
-        // 2. 정렬 로직 (에어컨 등 키워드 우선 + 보안시설 순서)
         filtered.sort((a, b) => {
             if (query) {
                 const aKeyMatch = (a.keyword + a.work).includes(query) ? 0 : 1;
                 const bKeyMatch = (b.keyword + b.work).includes(query) ? 0 : 1;
                 if (aKeyMatch !== bKeyMatch) return aKeyMatch - bKeyMatch;
             }
-
             const getRank = (c) => { for(let k in tabPriority) if(c.includes(k)) return tabPriority[k]; return 99; };
             const rA = getRank(a.cat), rB = getRank(b.cat);
             if (rA !== rB) return rA - rB;
-
             const nA = parseInt(a.cat.replace(/[^0-9]/g, "")) || 0;
             const nB = parseInt(b.cat.replace(/[^0-9]/g, "")) || 0;
             if (nA !== nB) return nA - nB;
-
             return new Intl.Collator('ko', {numeric: true}).compare(a.dept, b.dept);
         });
 
-        // 3. 렌더링
         filtered.forEach(r => {
             let displayNum = (r.tel||"").replace('02-3147-','').replace('02-2258-','');
             const rawHp = (r.hp || "").replace(/[^0-9]/g, "");
             if (!displayNum && rawHp) displayNum = r.hp;
-
             const getStyled = (s) => (s.includes('*1') || s.includes('2258')) ? `<span class="highlight-num">${s}</span>` : s;
-
             let callT = "";
             const rawT = (r.tel||"").replace(/[^0-9*]/g,'');
             if (rawT) {
@@ -223,7 +211,6 @@
                 else if (rawT.length === 4) callT = "023147" + rawT;
                 else callT = (rawT.length >= 7 && !rawT.startsWith('0')) ? "02" + rawT : rawT;
             }
-
             const tBtn = callT ? `<a href="tel:${callT}" class="btn-icon">T</a>` : `<div class="btn-placeholder"></div>`;
             const mBtn = rawHp.length > 5 ? `<a href="tel:${rawHp}" class="btn-icon btn-m">M</a>` : `<div class="btn-placeholder"></div>`;
 
