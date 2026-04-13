@@ -1,183 +1,124 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>성의교정 통합 게시판</title>
-    <!-- 외부 라이브러리 로드 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>인수인계 및 공지</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        [contenteditable]:empty:before { content: "내용을 입력하세요..."; color: #cbd5e1; font-style: italic; }
-        .prose h3 { font-size: 1.25rem; font-weight: 800; margin-top: 1rem; margin-bottom: 0.5rem; }
-        .prose ul { list-style-type: disc; padding-left: 1.25rem; }
+        :root { --brand-navy: #2d3e75; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #1e293b; letter-spacing: -0.02em; margin: 0; }
+        .app-container { width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh; background: #f8fafc; display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.05); }
+        .header { background: var(--brand-navy); color: white; padding: 20px; display: flex; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .notice-card { background: white; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0; margin: 0 16px 14px; cursor: pointer; transition: transform 0.2s ease; }
+        .notice-card:active { transform: scale(0.98); }
+        .tag { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; display: inline-block; }
+        .tag-notice { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; }
+        .title { font-size: 17px; font-weight: 800; line-height: 1.4; margin-bottom: 8px; color: #0f172a; }
+        #modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+        .modal-box { background: white; width: 100%; max-width: 420px; border-radius: 32px; display: flex; flex-direction: column; max-height: 85vh; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-body { padding: 32px; overflow-y: auto; }
+        .html-content { line-height: 1.7; color: #334155; }
+        .html-content p { margin-bottom: 1rem; }
+        .close-btn { margin: 0 24px 24px; padding: 16px; background: #f1f5f9; border-radius: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #475569; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="app-container">
+        <header class="header">
+            <h1 class="text-xl font-black">인수인계 및 공지</h1>
+        </header>
+        <!-- 게시물 리스트 영역 -->
+        <div id="notice-list" class="py-4">
+            <!-- 자바스크립트가 여기에 데이터를 채웁니다 -->
+        </div>
+    </div>
 
-    <!-- React 및 Firebase SDK -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom": "https://esm.sh/react-dom@18.2.0",
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
-      }
-    }
-    </script>
+    <!-- 상세 보기 모달 -->
+    <div id="modal" onclick="closeModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-body">
+                <div id="m-tag" class="tag tag-notice">공지사항</div>
+                <h2 id="m-title" class="title" style="font-size: 22px; margin-bottom: 12px;"></h2>
+                <div id="m-meta" class="text-xs text-slate-400 mb-6 font-bold flex justify-between">
+                    <span id="m-author">관리자</span>
+                    <span id="m-date"></span>
+                </div>
+                <div id="m-content" class="html-content text-[15px]"></div>
+            </div>
+            <div class="close-btn" onclick="closeModal()">닫기</div>
+        </div>
+    </div>
 
-    <script type="module">
-        import React, { useState, useEffect, useRef } from 'react';
-        import ReactDOM from 'react-dom';
-        import { initializeApp } from 'firebase/app';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+    <script>
+        /**
+         * [중요] 외부 서버 연결 대신, 파일 안에 데이터를 직접 저장했습니다.
+         * 새로운 공지가 생기면 아래 data 배열에 형식에 맞춰 추가만 하면 됩니다.
+         */
+        const noticeData = [
+            {
+                id: 3,
+                author: "관리자",
+                category: "공지사항",
+                title: "시신기증 접수증 전송 후 통화의 건",
+                date: "2026-04-13",
+                content: "<p>시신기증 접수증 전송 후 기존에는 즉시모심에 한하여 담당자와 통화하였으나, 현 담당자인 주상건 차장의 요청에 의하여 모든 건에 대하여 통화를 실시하여야 합니다.</p><p>즉시모심, 삼일장 구분 없이 접수증 전송 후 통화하시기 바랍니다.</p>"
+            },
+            {
+                id: 2,
+                author: "관리자",
+                category: "공지사항",
+                title: "성의회관 옥상 방수공사의 건",
+                date: "2026-04-12",
+                content: "<p>금주 금요일부터 성의회관 옥상 방수공사가 진행될 예정입니다. 소음이 발생할 수 있으니 업무에 참고하시기 바랍니다.</p>"
+            },
+            {
+                id: 1,
+                author: "관리자",
+                category: "공지사항",
+                title: "2월 연차오류에 따른 급여차감 건",
+                date: "2026-04-10",
+                content: "<p>지난 2월 연차 정산 과정에서 발생한 전산 오류로 인해 이번 달 급여에서 일부 차감이 발생할 예정입니다. 상세 내역은 개별 메일을 확인해 주세요.</p>"
+            }
+        ];
 
-        // 사용자 환경에서 제공된 설정값 (직접 실행 시에는 고정값 사용)
-        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
-        const appId = window.__app_id || 'sungui-integrated-board';
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        function App() {
-            const [user, setUser] = useState(null);
-            const [posts, setPosts] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [isModalOpen, setIsModalOpen] = useState(false);
-            const [isSubmitting, setIsSubmitting] = useState(false);
-            
-            // 입력 폼 상태
-            const [editingId, setEditingId] = useState(null);
-            const [category, setCategory] = useState('공지사항');
-            const [title, setTitle] = useState('');
-            const [content, setContent] = useState('');
-            const [author, setAuthor] = useState('');
-            const editorRef = useRef(null);
-
-            useEffect(() => {
-                // 로그인 없이 바로 사용할 수 있게 익명 인증 실행
-                signInAnonymously(auth).catch(console.error);
-                const unsubscribe = onAuthStateChanged(auth, setUser);
-                return () => unsubscribe();
-            }, []);
-
-            useEffect(() => {
-                if (!user) return;
-                const postsCol = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
-                const unsubscribe = onSnapshot(postsCol, (snapshot) => {
-                    const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                    setPosts(data);
-                    setLoading(false);
-                });
-                return () => unsubscribe();
-            }, [user]);
-
-            useEffect(() => {
-                lucide.createIcons();
-            }, [posts, isModalOpen]);
-
-            const handleSubmit = async () => {
-                const currentHtml = editorRef.current?.innerHTML || "";
-                if (!title || !author) return alert("제목과 작성자를 입력하세요.");
-                
-                setIsSubmitting(true);
-                try {
-                    const postData = { category, title, content: currentHtml, author, updatedAt: serverTimestamp() };
-                    if (editingId) {
-                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notices', editingId), postData);
-                    } else {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notices'), {
-                            ...postData, createdAt: serverTimestamp(), userId: user.uid
-                        });
-                    }
-                    closeModal();
-                } catch (e) { console.error(e); }
-                finally { setIsSubmitting(false); }
-            };
-
-            const closeModal = () => {
-                setIsModalOpen(false); setEditingId(null); setTitle(''); setAuthor(''); setContent('');
-            };
-
-            return React.createElement('div', { className: 'min-h-screen pb-20' }, [
-                // 헤더
-                React.createElement('header', { className: 'bg-[#0F172A] text-white p-6 shadow-lg flex justify-between items-center sticky top-0 z-50' }, [
-                    React.createElement('h1', { className: 'text-xl font-black' }, '성의교정 통합 게시판'),
-                    React.createElement('div', { className: 'text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/30' }, '실시간 클라우드 연결됨')
-                ]),
-
-                // 메인 리스트
-                React.createElement('main', { className: 'max-w-2xl mx-auto p-4 space-y-4' }, 
-                    loading ? React.createElement('div', { className: 'py-20 text-center text-slate-400 font-bold' }, '데이터 불러오는 중...') :
-                    posts.length === 0 ? React.createElement('div', { className: 'py-20 text-center border-4 border-dashed rounded-[40px] text-slate-300 font-bold' }, '등록된 게시물이 없습니다.') :
-                    posts.map(post => React.createElement('div', { key: post.id, className: 'bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 hover:shadow-md transition-all' }, [
-                        React.createElement('div', { className: 'flex justify-between' }, [
-                            React.createElement('span', { className: 'text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded' }, post.category),
-                            user && post.userId === user.uid && React.createElement('button', { onClick: () => {
-                                setEditingId(post.id); setCategory(post.category); setTitle(post.title); setAuthor(post.author); setContent(post.content); setIsModalOpen(true);
-                            }, className: 'text-slate-300 hover:text-blue-500' }, '편집')
-                        ]),
-                        React.createElement('h2', { className: 'text-2xl font-black mt-2 mb-4' }, post.title),
-                        React.createElement('div', { className: 'prose text-slate-600 mb-6', dangerouslySetInnerHTML: { __html: post.content } }),
-                        React.createElement('div', { className: 'pt-4 border-t flex justify-between text-[11px] text-slate-400 font-bold' }, [
-                            React.createElement('span', null, `작성자: ${post.author}`),
-                            React.createElement('span', null, post.createdAt ? new Date(post.createdAt.seconds * 1000).toLocaleString() : '')
-                        ])
-                    ]))
-                ),
-
-                // 플로팅 버튼
-                React.createElement('button', { 
-                    onClick: () => setIsModalOpen(true),
-                    className: 'fixed bottom-8 right-8 w-16 h-16 bg-blue-600 text-white rounded-3xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50'
-                }, '+'),
-
-                // 모달 (작성 창)
-                isModalOpen && React.createElement('div', { className: 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4' }, 
-                    React.createElement('div', { className: 'bg-white w-full max-w-lg rounded-[40px] p-8 max-h-[90vh] overflow-y-auto' }, [
-                        React.createElement('div', { className: 'flex justify-between mb-6' }, [
-                            React.createElement('h2', { className: 'text-xl font-black' }, editingId ? '글 수정하기' : '새 글 작성'),
-                            React.createElement('button', { onClick: closeModal }, '닫기')
-                        ]),
-                        React.createElement('input', { 
-                            type: 'text', value: title, onChange: e => setTitle(e.target.value), 
-                            placeholder: '제목을 입력하세요', className: 'w-full p-4 bg-slate-50 rounded-2xl mb-4 font-bold outline-none' 
-                        }),
-                        React.createElement('div', { className: 'border rounded-2xl overflow-hidden mb-4' }, [
-                            React.createElement('div', { className: 'bg-slate-50 p-2 border-b flex gap-2' }, [
-                                React.createElement('button', { onClick: () => document.execCommand('bold'), className: 'px-2 font-bold' }, 'B'),
-                                React.createElement('button', { onClick: () => document.execCommand('foreColor', false, '#ef4444'), className: 'px-2 text-red-500' }, 'A')
-                            ]),
-                            React.createElement('div', { 
-                                ref: editorRef, contentEditable: true, 
-                                className: 'p-4 min-h-[150px] outline-none prose',
-                                dangerouslySetInnerHTML: { __html: editingId ? content : '' }
-                            })
-                        ]),
-                        React.createElement('input', { 
-                            type: 'text', value: author, onChange: e => setAuthor(e.target.value), 
-                            placeholder: '작성자 이름', className: 'w-full p-4 bg-slate-50 rounded-2xl mb-6 outline-none text-sm' 
-                        }),
-                        React.createElement('button', { 
-                            onClick: handleSubmit, disabled: isSubmitting,
-                            className: 'w-full py-5 bg-blue-600 text-white font-black rounded-2xl'
-                        }, isSubmitting ? '처리 중...' : '게시하기')
-                    ])
-                )
-            ]);
+        function renderList() {
+            const listDiv = document.getElementById('notice-list');
+            listDiv.innerHTML = noticeData.map(post => {
+                const previewText = post.content.replace(/<[^>]*>?/gm, '').substring(0, 50);
+                return `
+                    <div class="notice-card" onclick="openModal(${post.id})">
+                        <span class="tag tag-notice">${post.category}</span>
+                        <h2 class="title">${post.title}</h2>
+                        <div class="text-xs text-slate-400 font-bold mb-3">${post.author} · ${post.date}</div>
+                        <div class="text-[13px] text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap">${previewText}...</div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+        function openModal(id) {
+            const post = noticeData.find(p => p.id === id);
+            if (!post) return;
+            
+            document.getElementById('m-title').innerText = post.title;
+            document.getElementById('m-author').innerText = post.author;
+            document.getElementById('m-date').innerText = post.date;
+            document.getElementById('m-content').innerHTML = post.content; // HTML 태그 해석 렌더링
+            
+            document.getElementById('modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // 초기 실행
+        window.onload = renderList;
     </script>
 </body>
 </html>
