@@ -3,152 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>공지사항 - 성의교정</title>
+    <title>공지사항 - SUNGUI PORTAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        :root { --brand-navy: #2d3e75; }
         body { 
-            font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b;
-            letter-spacing: -0.05em; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent;
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #f4f7fa; 
+            color: #1e293b;
+            margin: 0; padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
-        .header { background-color: var(--brand-navy); color: white; padding: 16px; display: flex; align-items: center; position: sticky; top: 0; z-index: 50; }
-        .btn-back { margin-right: 12px; padding: 8px; cursor: pointer; }
-        .list-item { background: white; border-bottom: 1px solid #f1f5f9; padding: 16px; cursor: pointer; transition: background 0.2s; }
-        .list-item:active { background: #f1f5f9; }
-        .category-badge { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #475569; margin-bottom: 6px; display: inline-block; }
-        .content-area img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; }
-        .content-area { line-height: 1.6; font-size: 15px; color: #334155; }
-        .hidden { display: none; }
+        .app-header {
+            background-color: #24344d;
+            color: white;
+            padding: 20px 16px;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .notice-card {
+            background: white;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+        .notice-card:active { transform: scale(0.98); background-color: #f8fafc; }
+        .icon-box {
+            width: 44px;
+            height: 44px;
+            background-color: #f1f5f9;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            flex-shrink: 0;
+        }
+        .badge-new {
+            background: #3b82f6;
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-left: 6px;
+        }
+        .content-view {
+            background: white;
+            min-height: 100vh;
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+            margin-top: -20px;
+            padding: 30px 20px;
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <!-- 상단 헤더 -->
-    <header class="header shadow-lg">
-        <div class="btn-back" onclick="handleBack()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-        </div>
-        <h1 id="header-title" class="text-lg font-black">공지사항</h1>
-    </header>
-
-    <!-- 1. 공지사항 목록 화면 -->
-    <div id="view-list" class="max-w-md mx-auto min-h-screen">
-        <div id="notice-list-container">
-            <!-- 목록이 여기에 렌더링됩니다 -->
-            <div class="p-10 text-center text-slate-400 font-bold">로딩 중...</div>
+    <!-- 헤더 영역 -->
+    <div class="app-header">
+        <div class="max-w-md mx-auto flex items-center">
+            <button onclick="handleBack()" class="p-2 -ml-2">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h1 id="top-title" class="ml-2 text-xl font-bold tracking-tight">공지사항</h1>
         </div>
     </div>
 
-    <!-- 2. 공지사항 상세 화면 -->
-    <div id="view-detail" class="max-w-md mx-auto min-h-screen bg-white hidden">
-        <div class="p-6 border-bottom border-slate-100">
-            <div id="detail-category" class="category-badge">공지</div>
-            <h2 id="detail-title" class="text-xl font-black text-slate-900 leading-tight mb-2">제목 로딩 중...</h2>
-            <div class="flex justify-between items-center text-[12px] font-bold text-slate-400">
-                <span id="detail-author">관리자</span>
-                <span id="detail-date">2024.00.00</span>
+    <!-- 리스트 뷰 -->
+    <div id="view-list" class="max-w-md mx-auto p-4 pt-8">
+        <div class="flex justify-between items-center mb-4 px-1">
+            <h2 class="text-lg font-extrabold text-slate-800">전체 알림 목록</h2>
+            <span id="post-count" class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">0 Posts</span>
+        </div>
+        
+        <div id="list-container">
+            <!-- 로딩 상태 -->
+            <div class="py-20 text-center">
+                <div class="loading-spinner mb-4"></div>
+                <p class="text-slate-400 font-bold text-sm">데이터를 가져오는 중...</p>
             </div>
         </div>
-        <div class="p-6 content-area" id="detail-content">
-            내용을 불러오는 중입니다...
+    </div>
+
+    <!-- 상세 뷰 -->
+    <div id="view-detail" class="hidden">
+        <div class="content-view max-w-md mx-auto shadow-2xl">
+            <div class="mb-6">
+                <div id="det-category" class="inline-block bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded mb-2">NOTICE</div>
+                <h2 id="det-title" class="text-2xl font-black text-slate-900 leading-tight mb-3">제목 로딩 중...</h2>
+                <div class="flex items-center text-slate-400 text-xs font-bold">
+                    <span id="det-author">Admin</span>
+                    <span class="mx-2">•</span>
+                    <span id="det-date">2024.00.00</span>
+                </div>
+            </div>
+            <hr class="border-slate-100 mb-6">
+            <div id="det-content" class="text-slate-700 leading-relaxed text-[15px] min-h-[300px]">
+                내용을 불러오고 있습니다.
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(window.__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = window.__app_id || 'default-app-id';
 
-        // URL 파라미터 확인 (상세보기 모드인지)
+        // 중요: 작성한 게시판 파일(integrated_dashboard.jsx 등)과 동일한 ID를 사용해야 합니다.
+        const appId = 'sungui-integrated-system'; 
+
         const urlParams = new URLSearchParams(window.location.search);
         const noticeId = urlParams.get('id');
 
-        // 뒤로가기 버튼 로직
         window.handleBack = function() {
             if (noticeId || !document.getElementById('view-detail').classList.contains('hidden')) {
-                window.location.href = 'notice.html'; // 목록으로 초기화
+                window.location.href = 'notice.html';
             } else {
-                window.location.href = 'index.html'; // 메인으로 이동
+                window.location.href = 'index.html';
             }
         };
 
         async function init() {
-            await signInAnonymously(auth);
-
-            if (noticeId) {
-                showDetail(noticeId);
-            } else {
-                showList();
-            }
-        }
-
-        // 목록 보기
-        function showList() {
-            document.getElementById('view-list').classList.remove('hidden');
-            document.getElementById('view-detail').classList.add('hidden');
-            document.getElementById('header-title').innerText = "공지사항 목록";
-
-            const noticeRef = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
-            onSnapshot(noticeRef, (snapshot) => {
-                const container = document.getElementById('notice-list-container');
-                const notices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                if (notices.length === 0) {
-                    container.innerHTML = `<div class="p-20 text-center text-slate-300 font-bold">등록된 공지가 없습니다.</div>`;
-                    return;
+            try {
+                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                    await signInWithCustomToken(auth, window.__initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
                 }
+            } catch (e) {
+                console.error("Auth Error", e);
+            }
 
-                // 최신순 정렬
-                notices.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-                container.innerHTML = notices.map(n => {
-                    const date = n.createdAt?.toDate().toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' }) || '-';
-                    return `
-                        <div class="list-item" onclick="location.href='notice.html?id=${n.id}'">
-                            <span class="category-badge">${n.category || '일반'}</span>
-                            <h3 class="font-black text-[16px] text-slate-800 mb-1 truncate">${n.title}</h3>
-                            <div class="flex justify-between items-center text-[11px] font-bold text-slate-400">
-                                <span>${n.author || '관리자'}</span>
-                                <span>${date}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+            onAuthStateChanged(auth, (user) => {
+                if (!user) return;
+                if (noticeId) {
+                    renderDetail(noticeId);
+                } else {
+                    renderList();
+                }
             });
         }
 
-        // 상세 보기
-        async function showDetail(id) {
+        function renderList() {
+            const listContainer = document.getElementById('list-container');
+            const countBadge = document.getElementById('post-count');
+            
+            // 공용 데이터 경로: /artifacts/sungui-integrated-system/public/data/notices
+            const noticeRef = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
+            
+            onSnapshot(noticeRef, (snapshot) => {
+                const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // 최신순 정렬 (서버 타입스탬프 기준)
+                docs.sort((a, b) => {
+                    const timeA = a.createdAt?.seconds || 0;
+                    const timeB = b.createdAt?.seconds || 0;
+                    return timeB - timeA;
+                });
+                
+                countBadge.innerText = `${docs.length} Posts`;
+
+                if (docs.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="py-20 text-center border-2 border-dashed border-slate-200 rounded-3xl">
+                            <p class="text-slate-300 font-bold">등록된 공지가 없습니다.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                listContainer.innerHTML = docs.map(doc => {
+                    const date = doc.createdAt?.toDate ? doc.createdAt.toDate() : new Date();
+                    const dateStr = date.toLocaleDateString('ko-KR', { month:'short', day:'numeric' });
+                    
+                    return `
+                        <div class="notice-card" onclick="location.href='notice.html?id=${doc.id}'">
+                            <div class="icon-box">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center mb-0.5">
+                                    <h3 class="font-bold text-slate-800 truncate text-[15px]">${doc.title}</h3>
+                                    ${(Date.now()/1000 - (doc.createdAt?.seconds || 0) < 86400) ? '<span class="badge-new">NEW</span>' : ''}
+                                </div>
+                                <p class="text-[11px] font-semibold text-slate-400">${dateStr} • ${doc.author || '관리자'}</p>
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                        </div>
+                    `;
+                }).join('');
+            }, (err) => {
+                console.error(err);
+                listContainer.innerHTML = `<div class="p-10 text-center text-red-400 font-bold">데이터를 불러오지 못했습니다.</div>`;
+            });
+        }
+
+        async function renderDetail(id) {
             document.getElementById('view-list').classList.add('hidden');
             document.getElementById('view-detail').classList.remove('hidden');
-            document.getElementById('header-title').innerText = "공지사항";
-
+            
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'notices', id);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    document.getElementById('detail-title').innerText = data.title;
-                    document.getElementById('detail-category').innerText = data.category || '공지';
-                    document.getElementById('detail-author').innerText = data.author || '관리자';
-                    document.getElementById('detail-date').innerText = data.createdAt?.toDate().toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' }) || '-';
-                    
-                    // HTML 태그가 포함될 수 있으므로 innerHTML로 렌더링 (보안상 필요시 sanitize 고려)
-                    document.getElementById('detail-content').innerHTML = data.content.replace(/\n/g, '<br>');
+                const snap = await getDoc(docRef);
+                
+                if (snap.exists()) {
+                    const data = snap.data();
+                    document.getElementById('det-title').innerText = data.title;
+                    document.getElementById('det-author').innerText = data.author || '관리자';
+                    document.getElementById('det-date').innerText = data.createdAt?.toDate().toLocaleString() || '-';
+                    document.getElementById('det-content').innerHTML = data.content.replace(/\n/g, '<br>');
                 } else {
-                    document.getElementById('detail-content').innerHTML = "삭제된 게시물입니다.";
+                    document.getElementById('det-content').innerText = "존재하지 않는 공지사항입니다.";
                 }
             } catch (e) {
-                console.error(e);
-                document.getElementById('detail-content').innerHTML = "데이터를 불러오는 중 오류가 발생했습니다.";
+                document.getElementById('det-content').innerText = "내용을 불러올 수 없습니다.";
             }
         }
 
