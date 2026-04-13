@@ -2,310 +2,157 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>성의교정 통합 공지사항</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>공지사항 - 성의교정</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- React & Babel for In-browser Compilation -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { -webkit-tap-highlight-color: transparent; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        :root { --brand-navy: #2d3e75; }
+        body { 
+            font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b;
+            letter-spacing: -0.05em; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent;
+        }
+        .header { background-color: var(--brand-navy); color: white; padding: 16px; display: flex; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .btn-back { margin-right: 12px; padding: 8px; cursor: pointer; }
+        .list-item { background: white; border-bottom: 1px solid #f1f5f9; padding: 16px; cursor: pointer; transition: background 0.2s; }
+        .list-item:active { background: #f1f5f9; }
+        .category-badge { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #475569; margin-bottom: 6px; display: inline-block; }
+        .content-area img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; }
+        .content-area { line-height: 1.6; font-size: 15px; color: #334155; }
+        .hidden { display: none; }
     </style>
 </head>
-<body class="bg-slate-50">
-    <div id="root">
-        <!-- 초기 로딩 화면 -->
-        <div class="flex items-center justify-center h-screen bg-white">
-            <div id="loader-status" class="text-slate-400 font-bold animate-pulse text-lg">시스템 초기화 중...</div>
+<body>
+
+    <!-- 상단 헤더 -->
+    <header class="header shadow-lg">
+        <div class="btn-back" onclick="handleBack()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <h1 id="header-title" class="text-lg font-black">공지사항</h1>
+    </header>
+
+    <!-- 1. 공지사항 목록 화면 -->
+    <div id="view-list" class="max-w-md mx-auto min-h-screen">
+        <div id="notice-list-container">
+            <!-- 목록이 여기에 렌더링됩니다 -->
+            <div class="p-10 text-center text-slate-400 font-bold">로딩 중...</div>
         </div>
     </div>
 
-    <!-- Firebase SDK Setup -->
+    <!-- 2. 공지사항 상세 화면 -->
+    <div id="view-detail" class="max-w-md mx-auto min-h-screen bg-white hidden">
+        <div class="p-6 border-bottom border-slate-100">
+            <div id="detail-category" class="category-badge">공지</div>
+            <h2 id="detail-title" class="text-xl font-black text-slate-900 leading-tight mb-2">제목 로딩 중...</h2>
+            <div class="flex justify-between items-center text-[12px] font-bold text-slate-400">
+                <span id="detail-author">관리자</span>
+                <span id="detail-date">2024.00.00</span>
+            </div>
+        </div>
+        <div class="p-6 content-area" id="detail-content">
+            내용을 불러오는 중입니다...
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, addDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 전역 객체로 노출
-        window.FB = { 
-            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, 
-            onAuthStateChanged, getFirestore, collection, onSnapshot, 
-            doc, addDoc, deleteDoc, serverTimestamp 
+        const firebaseConfig = JSON.parse(window.__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = window.__app_id || 'default-app-id';
+
+        // URL 파라미터 확인 (상세보기 모드인지)
+        const urlParams = new URLSearchParams(window.location.search);
+        const noticeId = urlParams.get('id');
+
+        // 뒤로가기 버튼 로직
+        window.handleBack = function() {
+            if (noticeId || !document.getElementById('view-detail').classList.contains('hidden')) {
+                window.location.href = 'notice.html'; // 목록으로 초기화
+            } else {
+                window.location.href = 'index.html'; // 메인으로 이동
+            }
         };
-        
-        // Firebase 준비 완료 표시 및 이벤트 발생
-        window.isFirebaseReady = true;
-        window.dispatchEvent(new Event('firebase-ready'));
-    </script>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        
-        function App() {
-            const [user, setUser] = useState(null);
-            const [posts, setPosts] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [viewMode, setViewMode] = useState('list');
-            const [selectedPost, setSelectedPost] = useState(null);
-            const [activeCategory, setActiveCategory] = useState('전체');
-            const [searchQuery, setSearchQuery] = useState('');
-            
-            const [title, setTitle] = useState('');
-            const [author, setAuthor] = useState('관리자');
-            const [category, setCategory] = useState('공지사항');
-            const editorRef = useRef(null);
+        async function init() {
+            await signInAnonymously(auth);
 
-            // Firebase 설정 (환경변수가 없을 경우 대비한 기본값 포함)
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'sungui-duty-app';
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                apiKey: "", 
-                authDomain: "",
-                projectId: "",
-                storageBucket: "",
-                messagingSenderId: "",
-                appId: ""
-            };
+            if (noticeId) {
+                showDetail(noticeId);
+            } else {
+                showList();
+            }
+        }
 
-            useEffect(() => {
-                if (!window.FB) return;
-                const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, collection, onSnapshot } = window.FB;
-                
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
+        // 목록 보기
+        function showList() {
+            document.getElementById('view-list').classList.remove('hidden');
+            document.getElementById('view-detail').classList.add('hidden');
+            document.getElementById('header-title').innerText = "공지사항 목록";
 
-                const initAuth = async () => {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (e) { 
-                        console.error("Auth Error", e);
-                        setLoading(false);
-                    }
-                };
+            const noticeRef = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
+            onSnapshot(noticeRef, (snapshot) => {
+                const container = document.getElementById('notice-list-container');
+                const notices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                initAuth();
+                if (notices.length === 0) {
+                    container.innerHTML = `<div class="p-20 text-center text-slate-300 font-bold">등록된 공지가 없습니다.</div>`;
+                    return;
+                }
 
-                const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-                    setUser(u);
-                    if (u) {
-                        setLoading(false);
-                        // 데이터 바인딩
-                        const q = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
-                        const unsubData = onSnapshot(q, (snap) => {
-                            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                            setPosts(data);
-                            setTimeout(() => { if(window.lucide) lucide.createIcons(); }, 100);
-                        }, (err) => {
-                            console.error("Firestore Error", err);
-                        });
-                        return () => unsubData();
-                    }
-                });
+                // 최신순 정렬
+                notices.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-                return () => unsubscribeAuth();
-            }, []);
-
-            const handleSave = async () => {
-                const { getFirestore, collection, addDoc, serverTimestamp } = window.FB;
-                const db = getFirestore();
-                
-                if (!title.trim()) return alert("제목을 입력해주세요.");
-                const contentHtml = editorRef.current?.innerText || "";
-                
-                try {
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notices'), {
-                        title, author, category, 
-                        content: contentHtml,
-                        createdAt: serverTimestamp()
-                    });
-                    setViewMode('list');
-                    setTitle('');
-                } catch (e) { alert("저장 실패"); }
-            };
-
-            const handleDelete = async (id, e) => {
-                const { getFirestore, doc, deleteDoc } = window.FB;
-                const db = getFirestore();
-                
-                e.stopPropagation();
-                if (!confirm("정말 삭제하시겠습니까?")) return;
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notices', id));
-                    if (selectedPost?.id === id) setViewMode('list');
-                } catch (e) { alert("삭제 실패"); }
-            };
-
-            const filteredPosts = posts.filter(p => {
-                const titleMatch = p.title && p.title.includes(searchQuery);
-                const contentMatch = p.content && p.content.includes(searchQuery);
-                const matchesSearch = titleMatch || contentMatch;
-                const matchesCategory = activeCategory === '전체' || p.category === activeCategory;
-                return matchesSearch && matchesCategory;
+                container.innerHTML = notices.map(n => {
+                    const date = n.createdAt?.toDate().toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' }) || '-';
+                    return `
+                        <div class="list-item" onclick="location.href='notice.html?id=${n.id}'">
+                            <span class="category-badge">${n.category || '일반'}</span>
+                            <h3 class="font-black text-[16px] text-slate-800 mb-1 truncate">${n.title}</h3>
+                            <div class="flex justify-between items-center text-[11px] font-bold text-slate-400">
+                                <span>${n.author || '관리자'}</span>
+                                <span>${date}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             });
-
-            if (loading) return (
-                <div className="flex items-center justify-center h-screen bg-white">
-                    <div className="text-slate-400 font-bold animate-pulse text-lg">데이터 연결 중...</div>
-                </div>
-            );
-
-            return (
-                <div className="max-w-2xl mx-auto min-h-screen bg-white shadow-xl flex flex-col">
-                    <div className="bg-[#2d3e75] text-white p-6 flex justify-between items-center sticky top-0 z-20 shadow-md">
-                        {viewMode !== 'list' && (
-                            <button onClick={() => setViewMode('list')} className="mr-4 p-1 hover:bg-white/10 rounded-full transition-all">
-                                <i data-lucide="chevron-left"></i>
-                            </button>
-                        )}
-                        <h1 className="text-xl font-black flex-grow">
-                            {viewMode === 'list' ? '성의교정 통합 공지' : viewMode === 'detail' ? '공지 상세' : '새 글 작성'}
-                        </h1>
-                        {viewMode === 'list' && (
-                            <button onClick={() => setViewMode('write')} className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-lg">
-                                <i data-lucide="plus" className="w-4 h-4"></i> 글쓰기
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex-grow p-4">
-                        {viewMode === 'list' && (
-                            <div className="space-y-4">
-                                <div className="relative">
-                                    <i data-lucide="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
-                                    <input 
-                                        type="text" 
-                                        placeholder="검색어를 입력하세요..." 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                    {['전체', '공지사항', '인수인계', '업무연락'].map(cat => (
-                                        <button 
-                                            key={cat}
-                                            onClick={() => setActiveCategory(cat)}
-                                            className={`px-5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-[#2d3e75] text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="grid gap-3">
-                                    {filteredPosts.length > 0 ? filteredPosts.map(post => (
-                                        <div 
-                                            key={post.id}
-                                            onClick={() => { setSelectedPost(post); setViewMode('detail'); window.scrollTo(0,0); }}
-                                            className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm hover:border-blue-300 transition-all cursor-pointer active:scale-[0.98] group relative"
-                                        >
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className="text-[10px] font-black px-3 py-1 bg-blue-50 text-blue-600 rounded-full">{post.category}</span>
-                                                <button onClick={(e) => handleDelete(post.id, e)} className="text-slate-200 hover:text-red-500 transition-colors">
-                                                    <i data-lucide="trash-2" className="w-4 h-4"></i>
-                                                </button>
-                                            </div>
-                                            <h3 className="text-lg font-black text-slate-800 group-hover:text-blue-700 transition-colors mb-2">{post.title}</h3>
-                                            <div className="flex items-center gap-3 text-xs font-bold text-slate-400">
-                                                <div className="flex items-center gap-1"><i data-lucide="user" className="w-3 h-3"></i> {post.author}</div>
-                                                <div className="flex items-center gap-1"><i data-lucide="clock" className="w-3 h-3"></i> {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString() : '로딩중...'}</div>
-                                            </div>
-                                        </div>
-                                    )) : (
-                                        <div className="text-center py-20 text-slate-300 font-bold">등록된 공지사항이 없습니다.</div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {viewMode === 'detail' && selectedPost && (
-                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                <div className="mb-6">
-                                    <span className="text-xs font-black px-3 py-1 bg-blue-100 text-blue-700 rounded-full mb-3 inline-block">{selectedPost.category}</span>
-                                    <h2 className="text-2xl font-black text-slate-900 leading-tight mb-4">{selectedPost.title}</h2>
-                                    <div className="flex items-center gap-4 text-sm font-bold text-slate-400 pb-6 border-b border-slate-100">
-                                        <span>작성자: {selectedPost.author}</span>
-                                        <span>날짜: {selectedPost.createdAt?.toDate ? selectedPost.createdAt.toDate().toLocaleString() : ''}</span>
-                                    </div>
-                                </div>
-                                <div className="text-slate-700 leading-relaxed min-h-[300px] whitespace-pre-wrap py-4 font-medium">
-                                    {selectedPost.content}
-                                </div>
-                                <button 
-                                    onClick={() => setViewMode('list')}
-                                    className="w-full mt-10 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl hover:bg-slate-200 transition-all"
-                                >
-                                    목록으로 돌아가기
-                                </button>
-                            </div>
-                        )}
-
-                        {viewMode === 'write' && (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-400 ml-1">카테고리</label>
-                                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                                        {['공지사항', '인수인계', '업무연락'].map(cat => (
-                                            <button 
-                                                key={cat}
-                                                onClick={() => setCategory(cat)}
-                                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${category === cat ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-500'}`}
-                                            >
-                                                {cat}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-400 ml-1">제목</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-lg font-black focus:ring-2 focus:ring-blue-400 outline-none" 
-                                        placeholder="공지 제목을 입력하세요"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-400 ml-1">내용</label>
-                                    <div 
-                                        ref={editorRef}
-                                        contentEditable
-                                        className="w-full min-h-[300px] bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-400 outline-none font-medium text-slate-700"
-                                    ></div>
-                                </div>
-                                <div className="flex gap-3 pt-4">
-                                    <button onClick={() => setViewMode('list')} className="flex-1 py-4 bg-slate-100 text-slate-500 font-black rounded-2xl">취소</button>
-                                    <button onClick={handleSave} className="flex-[2] py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-200">등록하기</button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
         }
 
-        const startApp = () => {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<App />);
-        };
+        // 상세 보기
+        async function showDetail(id) {
+            document.getElementById('view-list').classList.add('hidden');
+            document.getElementById('view-detail').classList.remove('hidden');
+            document.getElementById('header-title').innerText = "공지사항";
 
-        // Firebase 로딩 상태에 따라 즉시 실행 또는 이벤트 리스너 등록
-        if (window.isFirebaseReady) {
-            startApp();
-        } else {
-            window.addEventListener('firebase-ready', startApp);
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'notices', id);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('detail-title').innerText = data.title;
+                    document.getElementById('detail-category').innerText = data.category || '공지';
+                    document.getElementById('detail-author').innerText = data.author || '관리자';
+                    document.getElementById('detail-date').innerText = data.createdAt?.toDate().toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' }) || '-';
+                    
+                    // HTML 태그가 포함될 수 있으므로 innerHTML로 렌더링 (보안상 필요시 sanitize 고려)
+                    document.getElementById('detail-content').innerHTML = data.content.replace(/\n/g, '<br>');
+                } else {
+                    document.getElementById('detail-content').innerHTML = "삭제된 게시물입니다.";
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('detail-content').innerHTML = "데이터를 불러오는 중 오류가 발생했습니다.";
+            }
         }
+
+        init();
     </script>
 </body>
 </html>
