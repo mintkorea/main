@@ -102,11 +102,11 @@
 
         <div class="px-3 -mt-6 relative z-10">
             <div class="grid grid-cols-3 gap-3">
-                <div class="quick-btn cursor-pointer">
+                <div onclick="location.href='calendar.html'" class="quick-btn cursor-pointer">
                     <img src="https://img.icons8.com/fluency/48/calendar.png" width="20">
                     <span>근무달력</span>
                 </div>
-                <div class="quick-btn cursor-pointer">
+                <div onclick="location.href='yellowpage.html'" class="quick-btn cursor-pointer">
                     <img src="https://img.icons8.com/fluency/48/phone.png" width="20">
                     <span>주요전화</span>
                 </div>
@@ -118,21 +118,21 @@
         </div>
 
         <!-- 근무 편성 카드 -->
-        <div class="table-card mt-2">
+        <div onclick="location.href='team.html'" class="table-card mt-2">
             <div class="table-header label-duty">근무<br>편성</div>
             <div id="duty-preview-container" class="table-body flex flex-col justify-center"></div>
         </div>
 
         <!-- 오늘 행사 카드 -->
-        <div class="table-card">
+        <div onclick="location.href='rentalm.html'" class="table-card">
             <div class="table-header label-event">오늘<br>행사</div>
             <div id="event-list" class="table-body">
                 <div class="text-[12px] text-slate-300 font-bold text-center py-2">조회 중...</div>
             </div>
         </div>
 
-        <!-- ⭐ 핵심 수정: 공지사항 클릭 시 리액트 게시판 파일(notice.jsx)로 이동 -->
-        <div onclick="location.href='notice.jsx'" class="table-card">
+        <!-- 공지사항 카드 -->
+        <div onclick="location.href='notice.html'" class="table-card">
             <div class="table-header label-notice">최신<br>공지</div>
             <div id="latest-notice-container" class="table-body">
                 <div class="text-[12px] text-slate-300 font-bold py-2">로딩...</div>
@@ -140,7 +140,7 @@
         </div>
 
         <!-- 오늘 식단 카드 -->
-        <div class="table-card">
+        <div onclick="location.href='meal.html'" class="table-card">
             <div class="table-header label-meal">오늘<br>식단</div>
             <div class="table-body flex p-0 min-h-[60px]">
                 <div class="flex-1 flex flex-col justify-center items-center border-r border-slate-100">
@@ -185,7 +185,6 @@
             set: (key, val) => localStorage.setItem(key, JSON.stringify(val))
         };
 
-        // 메인 페이지의 '최신 공지' 프리뷰 업데이트
         async function fetchNoticePreview() {
             const previewContainer = document.getElementById('latest-notice-container');
             try {
@@ -203,7 +202,6 @@
             }
         }
 
-        // 근무 관련 로직
         function getShiftName(d) {
             let base = new Date(baseDate); base.setHours(0,0,0,0);
             let target = new Date(d); target.setHours(0,0,0,0);
