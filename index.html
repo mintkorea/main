@@ -18,7 +18,6 @@
         }
         .app-container { width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
         
-        /* 상단 헤더 영역 */
         .brand-header { 
             background-color: var(--brand-navy); 
             padding: 24px 20px 45px 20px; 
@@ -28,7 +27,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
         }
         
-        /* [수정] 달력: 흰색 배경 디자인으로 변경 */
         .custom-date-trigger {
             background-color: white;
             color: var(--brand-navy);
@@ -54,7 +52,6 @@
         
         .table-body { flex-grow: 1; padding: 12px 16px; min-width: 0; }
         
-        /* 근무편성 */
         .duty-item { font-size: 0.9rem; padding: 4px 0; display: flex; align-items: center; white-space: nowrap; }
         .duty-date { font-weight: 700; color: #64748b; width: 70px; flex-shrink: 0; }
         .duty-shift { font-weight: 900; margin-right: 8px; flex-shrink: 0; }
@@ -63,7 +60,6 @@
         .shift-B { color: #3b82f6; }
         .shift-C { color: #f97316; }
 
-        /* 공지사항 */
         .notice-title-main { 
             font-size: 15px; 
             font-weight: 900; 
@@ -97,13 +93,8 @@
         <div class="brand-header">
             <div class="flex justify-between items-start w-full">
                 <div class="flex flex-col">
-                    <!-- [수정] Catholic University 삭제 -->
                     <span class="text-2xl font-black tracking-tight mt-1">성의교정 통합조회</span>
-                    
-                    <!-- [수정] 달력: 흰색 배경 디자인 -->
-                    <div id="datePickerTrigger" class="custom-date-trigger">
-                        날짜 로딩...
-                    </div>
+                    <div id="datePickerTrigger" class="custom-date-trigger">날짜 로딩...</div>
                 </div>
                 <div id="shift-badge" class="bg-[#facc15] text-[#422006] px-3 py-1 rounded-lg font-black text-[11px] shadow-md mt-1">--조 근무</div>
             </div>
@@ -168,6 +159,9 @@
 
     <script>
         const NOTICE_API_URL = "https://script.google.com/macros/s/AKfycbyZsShJ5BztRyC-eTNmCy2wfSYOd8NjpgnO-0AbfTfpQqxD-XotTs3oglQ5T0dJB-nW/exec";
+        const EVENT_API_URL = "https://script.google.com/macros/s/AKfycbzKtqrzNK11rX4sCdDFv0lcgUcdVwsNiUnlXYc8Zjm0dJNlNV8ThwKrtqOgKBeVrP3g/exec";
+        const MEAL_API_URL = "https://script.google.com/macros/s/AKfycbxZkcn8EEcGcxMaT98l_CKJTCM_0Ual_S2JefpHptm_dbEtQ5tjM00TEhU2XdqTObLh/exec";
+        
         const HOLIDAYS = ["2026-01-01", "2026-03-01", "2026-05-05", "2026-06-06", "2026-08-15", "2026-10-03", "2026-10-09", "2026-12-25"];
         const baseDate = '2026-03-09';
         const patterns = ['C', 'A', 'B'];
@@ -183,6 +177,15 @@
         let currentDate = getKSTNow();
         function getKSTNow() { const now = new Date(); return new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 60 * 60000)); }
 
+        // LocalStorage 캐시 유틸리티
+        const Cache = {
+            get: (key) => {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            },
+            set: (key, val) => localStorage.setItem(key, JSON.stringify(val))
+        };
+
         async function fetchLatestNotice() {
             const container = document.getElementById('latest-notice-container');
             try {
@@ -194,13 +197,7 @@
                 }
                 const latest = posts[posts.length - 1];
                 const [id, user, category, title, content, date] = latest;
-                
-                container.innerHTML = `
-                    <div>
-                        <span class="notice-title-main">${title}</span>
-                        <span class="notice-info-sub">[${category}] ${user} · ${date.split(' ')[0]}</span>
-                    </div>
-                `;
+                container.innerHTML = `<div><span class="notice-title-main">${title}</span><span class="notice-info-sub">[${category}] ${user} · ${date.split(' ')[0]}</span></div>`;
             } catch (e) { container.innerHTML = `<div class="text-[11px] text-red-400">로드 실패</div>`; }
         }
 
@@ -219,20 +216,12 @@
             return workersPatternC[idx];
         }
 
-        async function updateDisplay() {
+        function updateDutyUI() {
             const days = ['일','월','화','수','목','금','토'];
-            const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
-            const displayStr = `${currentDate.getFullYear()}.${String(currentDate.getMonth()+1).padStart(2,'0')}.${String(currentDate.getDate()).padStart(2,'0')} (${days[currentDate.getDay()]})`;
-            
-            const trigger = document.getElementById('datePickerTrigger');
-            trigger.innerText = displayStr;
-            trigger.classList.toggle('day-sun', currentDate.getDay() === 0 || HOLIDAYS.includes(dateStr));
-            trigger.classList.toggle('day-sat', currentDate.getDay() === 6);
-            
+            const container = document.getElementById('duty-preview-container');
             const currentShift = getShiftName(currentDate);
             document.getElementById('shift-badge').innerText = `${currentShift}조 근무`;
             
-            const container = document.getElementById('duty-preview-container');
             const getTeamMembers = (shift, date) => {
                 if (shift === 'A') return teamA;
                 if (shift === 'B') return teamB;
@@ -288,42 +277,86 @@
                 `;
             }
             container.innerHTML = html;
-
-            updateEvents(currentDate);
-            updateMeal(currentDate);
-            fetchLatestNotice();
         }
 
         async function updateEvents(date) {
             const container = document.getElementById('event-list');
-            const url = "https://script.google.com/macros/s/AKfycbzKtqrzNK11rX4sCdDFv0lcgUcdVwsNiUnlXYc8Zjm0dJNlNV8ThwKrtqOgKBeVrP3g/exec";
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            
+            // 1. 캐시 확인 및 즉시 노출
+            const cached = Cache.get('events_cache');
+            if (cached && cached.date === dateStr) {
+                renderEvents(cached.data);
+            }
+
+            // 2. 배경에서 최신 데이터 가져오기 (공지는 항상 최신)
             try {
-                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                const res = await fetch(`${url}?t=${Date.now()}`);
+                const res = await fetch(`${EVENT_API_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                const hallEvents = data.filter(r => r.rawDate === dateStr && r.bu.includes("성의회관"));
-                const researchEvents = data.filter(r => r.rawDate === dateStr && r.bu.includes("의산연"));
+                const filtered = data.filter(r => r.rawDate === dateStr);
                 
-                let html = `<div class="mb-2"><span class="building-badge badge-hall">성의회관</span>`;
-                /* [수정] 대관 내역이 없습니다. 문구 반영 */
-                html += hallEvents.length ? hallEvents.map(i => `<div class="text-[13px] font-bold leading-snug"><span class="event-place">[${i.place}]</span>${i.event}</div>`).join('') : `<div class="text-[11px] text-slate-300 ml-1">대관 내역이 없습니다.</div>`;
-                html += `</div><div><span class="building-badge badge-research">의산연</span>`;
-                html += researchEvents.length ? researchEvents.map(i => `<div class="text-[13px] font-bold leading-snug"><span class="event-place">[${i.place}]</span>${i.event}</div>`).join('') : `<div class="text-[11px] text-slate-300 ml-1">대관 내역이 없습니다.</div>`;
-                html += `</div>`;
-                container.innerHTML = html;
-            } catch(e) { container.innerHTML = `<div class="text-xs text-red-400">데이터 오류</div>`; }
+                // 캐시 업데이트 및 UI 갱신
+                Cache.set('events_cache', { date: dateStr, data: filtered });
+                renderEvents(filtered);
+            } catch(e) { if(!cached) container.innerHTML = `<div class="text-xs text-red-400">데이터 오류</div>`; }
+        }
+
+        function renderEvents(events) {
+            const container = document.getElementById('event-list');
+            const hallEvents = events.filter(r => r.bu.includes("성의회관"));
+            const researchEvents = events.filter(r => r.bu.includes("의산연"));
+            
+            let html = `<div class="mb-2"><span class="building-badge badge-hall">성의회관</span>`;
+            html += hallEvents.length ? hallEvents.map(i => `<div class="text-[13px] font-bold leading-snug"><span class="event-place">[${i.place}]</span>${i.event}</div>`).join('') : `<div class="text-[11px] text-slate-300 ml-1">대관 내역이 없습니다.</div>`;
+            html += `</div><div><span class="building-badge badge-research">의산연</span>`;
+            html += researchEvents.length ? researchEvents.map(i => `<div class="text-[13px] font-bold leading-snug"><span class="event-place">[${i.place}]</span>${i.event}</div>`).join('') : `<div class="text-[11px] text-slate-300 ml-1">대관 내역이 없습니다.</div>`;
+            html += `</div>`;
+            container.innerHTML = html;
         }
 
         async function updateMeal(date) {
-            const url = "https://script.google.com/macros/s/AKfycbxZkcn8EEcGcxMaT98l_CKJTCM_0Ual_S2JefpHptm_dbEtQ5tjM00TEhU2XdqTObLh/exec";
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+            
+            // 1. 캐시 확인
+            const cached = Cache.get('meal_cache');
+            if (cached && cached.date === dateStr) {
+                renderMeal(cached.data);
+            }
+
+            // 2. 최신 데이터 갱신
             try {
-                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-                const res = await fetch(url);
+                const res = await fetch(MEAL_API_URL);
                 const data = await res.json();
-                const day = data[key];
-                document.getElementById('lunch-menu').innerText = day ? (day["중식"] || day["중 식"])?.menu.split('(')[0] : "없음";
-                document.getElementById('night-menu').innerText = day ? (day["야식"] || day["야 식"])?.menu.split('(')[0] : "없음";
+                const dayMeal = data[dateStr];
+                Cache.set('meal_cache', { date: dateStr, data: dayMeal });
+                renderMeal(dayMeal);
             } catch(e) { }
+        }
+
+        function renderMeal(day) {
+            document.getElementById('lunch-menu').innerText = day ? (day["중식"] || day["중 식"])?.menu.split('(')[0] : "없음";
+            document.getElementById('night-menu').innerText = day ? (day["야식"] || day["야 식"])?.menu.split('(')[0] : "없음";
+        }
+
+        async function updateDisplay() {
+            const days = ['일','월','화','수','목','금','토'];
+            const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+            const displayStr = `${currentDate.getFullYear()}.${String(currentDate.getMonth()+1).padStart(2,'0')}.${String(currentDate.getDate()).padStart(2,'0')} (${days[currentDate.getDay()]})`;
+            
+            const trigger = document.getElementById('datePickerTrigger');
+            trigger.innerText = displayStr;
+            trigger.classList.toggle('day-sun', currentDate.getDay() === 0 || HOLIDAYS.includes(dateStr));
+            trigger.classList.toggle('day-sat', currentDate.getDay() === 6);
+            
+            // 근무표는 로컬 연산이므로 즉시 갱신
+            updateDutyUI();
+            
+            // 행사 및 식단: 캐시 먼저 보여주고 백그라운드 업데이트
+            updateEvents(currentDate);
+            updateMeal(currentDate);
+            
+            // 공지사항: 항상 최신
+            fetchLatestNotice();
         }
 
         window.onload = () => {
