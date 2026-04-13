@@ -7,217 +7,223 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; margin: 0; padding-bottom: 50px; }
-        .header-gradient { background: linear-gradient(180deg, #4272d7 0%, #2d55b3 100%); border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; transition: all 0.2s; }
-        .btn-edit { background-color: #28a745; color: white; }
-        .btn-delete { background-color: #dc3545; color: white; }
-        .tag-notice { background-color: #fff1f0; color: #ff4d4f; border: 1px solid #ffa39e; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
-        .search-input { border-radius: 8px; border: 1px solid #d1d5db; padding: 10px 10px 10px 35px; width: 100%; }
-        .write-section { background: white; border-radius: 16px; border: 2px solid #2d55b3; overflow: hidden; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; margin: 0; padding-bottom: 100px; color: #334155; }
+        
+        .header-bg { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        
+        /* 에디터 스타일 */
+        .editor-container { border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: white; }
+        .editor-toolbar { background: #f1f5f9; border-bottom: 1px solid #cbd5e1; display: flex; gap: 4px; padding: 8px; flex-wrap: wrap; }
+        
+        .toolbar-btn { padding: 6px 10px; border-radius: 4px; background: white; border: 1px solid #e2e8f0; font-weight: bold; font-size: 13px; cursor: pointer; color: #475569; display: flex; align-items: center; justify-content: center; min-width: 32px; }
+        .toolbar-btn:hover { background: #e2e8f0; color: #1e40af; }
+        
+        .btn-red { color: #ef4444 !important; border-color: #fee2e2; }
+        .btn-blue { color: #3b82f6 !important; border-color: #dbeafe; }
+        
+        #editor-body { min-height: 250px; padding: 16px; outline: none; font-size: 14px; line-height: 1.6; background: white; }
+        #editor-body:empty:before { content: attr(placeholder); color: #94a3b8; }
+        
+        /* 게시글 본문 스타일 */
+        .post-content { line-height: 1.7; word-break: break-all; }
+        .post-content font[color="#ef4444"] { color: #ef4444; }
+        .post-content font[color="#3b82f6"] { color: #3b82f6; }
+        
+        /* 한 줄 말머리 스타일 */
+        .tag-inline { 
+            display: inline-block;
+            background-color: #fff1f0; 
+            color: #ff4d4f; 
+            border: 1px solid #ffa39e; 
+            font-size: 11px; 
+            font-weight: bold; 
+            padding: 1px 6px; 
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .btn-primary { background-color: #1e293b; color: white; padding: 12px; border-radius: 8px; font-weight: 700; width: 100%; transition: background 0.2s; }
+        .btn-primary:hover { background-color: #0f172a; }
     </style>
 </head>
 <body>
 
-    <!-- 헤더 -->
-    <header class="header-gradient p-6 mb-6">
-        <div class="max-w-3xl mx-auto flex items-center justify-center gap-3 text-white">
-            <span class="text-3xl">🏛️</span>
-            <h1 class="text-2xl font-black tracking-tight">성의 교정 통합 게시판</h1>
+    <header class="header-bg py-6 px-4 mb-6 text-center text-white shadow-md">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-2xl font-black flex items-center justify-center gap-3">
+                🏛️ 성의 교정 통합 게시판
+            </h1>
         </div>
     </header>
 
-    <main class="max-w-3xl mx-auto px-4">
-        
+    <main class="max-w-4xl mx-auto px-4">
         <!-- 검색 및 버튼 영역 -->
-        <div class="flex flex-col gap-4 mb-8">
-            <div class="flex justify-end">
-                <button onclick="scrollToWrite()" class="bg-[#1e293b] text-white px-5 py-2 rounded-lg font-bold text-sm shadow-md flex items-center gap-2">
-                    📝 새 글 등록하기
-                </button>
-            </div>
-            <div class="relative">
-                <span class="absolute left-3 top-3 text-gray-400">🔍</span>
-                <input type="text" id="search-input" oninput="searchPosts()" placeholder="제목 또는 작성자 검색..." class="search-input shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
+        <div class="flex justify-between items-center mb-6 gap-4">
+            <input type="text" id="search-box" oninput="searchPosts()" placeholder="검색어 입력..." class="flex-1 px-4 py-2 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 text-sm shadow-sm">
+            <button onclick="document.getElementById('write-section').scrollIntoView({behavior:'smooth'})" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md whitespace-nowrap">
+                📝 새 글 쓰기
+            </button>
         </div>
 
-        <!-- 게시글 리스트 -->
-        <div id="post-list" class="space-y-6 mb-12">
-            <!-- 데이터가 여기에 렌더링됩니다 -->
-        </div>
+        <!-- 게시글 리스트 영역 -->
+        <div id="posts-container" class="space-y-4 mb-12"></div>
 
-        <!-- 페이지네이션 (사진과 동일하게 장식용으로 추가) -->
-        <div class="flex justify-center gap-2 mb-12">
-            <span class="w-8 h-8 flex items-center justify-center bg-[#2d55b3] text-white rounded font-bold">1</span>
-        </div>
-
-        <!-- 게시글 작성 섹션 (하단 고정형) -->
-        <section class="write-section shadow-xl" id="write-section">
-            <div class="bg-slate-50 p-4 border-b flex items-center justify-between">
-                <h2 class="font-bold text-slate-700 flex items-center gap-2">✍️ 게시글 작성</h2>
-                <span class="text-xs text-slate-400 font-bold">👤 접속자: 관리자</span>
+        <!-- 작성 섹션 -->
+        <section id="write-section" class="card overflow-hidden mb-20 border-2 border-blue-100">
+            <div class="p-4 border-b border-gray-100 bg-slate-50">
+                <h2 class="font-bold text-slate-800">✍️ 게시글 작성</h2>
             </div>
+            
             <div class="p-6">
-                <div class="flex gap-3 mb-4">
-                    <select id="new-category" class="border rounded-lg p-3 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="flex gap-2 mb-4">
+                    <select id="post-category" class="border rounded-lg px-3 py-2 text-sm font-bold bg-white outline-none w-32">
                         <option>공지사항</option>
                         <option>성의회관</option>
                         <option>의생명</option>
                     </select>
-                    <input type="text" id="new-title" placeholder="제목을 입력하세요" class="flex-1 border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <!-- 툴바 (사진 구현) -->
-                <div class="flex gap-4 p-2 bg-slate-50 border-t border-l border-r rounded-t-lg text-slate-500 text-sm">
-                    <span class="font-bold border-r pr-3 cursor-pointer">B</span>
-                    <span class="italic border-r pr-3 cursor-pointer">I</span>
-                    <span class="underline border-r pr-3 cursor-pointer">U</span>
-                    <span class="border-r pr-3 cursor-pointer">≡</span>
-                    <span class="cursor-pointer">A</span>
-                </div>
-                <textarea id="new-content" rows="8" class="w-full border p-4 text-sm rounded-b-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4" placeholder="내용을 입력하세요"></textarea>
-                
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-slate-500 mb-2">📎 사진 첨부</label>
-                    <input type="file" class="text-xs text-slate-400 border w-full p-2 rounded-lg bg-slate-50">
+                    <input type="text" id="post-title" placeholder="제목을 입력해 주세요" class="flex-1 border rounded-lg px-4 py-2 text-sm outline-none">
                 </div>
 
-                <button onclick="addPost()" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-black text-lg transition-all shadow-lg">
-                    게시글 등록 완료
-                </button>
+                <div class="editor-container mb-4">
+                    <!-- 툴바 -->
+                    <div class="editor-toolbar">
+                        <button class="toolbar-btn" onclick="execCommand('bold')" title="굵게">B</button>
+                        <button class="toolbar-btn underline" onclick="execCommand('underline')" title="밑줄">U</button>
+                        <button class="toolbar-btn btn-red" onclick="execCommand('foreColor', '#ef4444')" title="빨간색">A</button>
+                        <button class="toolbar-btn btn-blue" onclick="execCommand('foreColor', '#3b82f6')" title="파란색">A</button>
+                        <button class="toolbar-btn" onclick="execCommand('foreColor', '#334155')" title="검정색">A</button>
+                        <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                        <button class="toolbar-btn" onclick="execCommand('insertUnorderedList')" title="리스트">•</button>
+                        <button class="toolbar-btn" onclick="execCommand('removeFormat')" title="서식 지우기">CLR</button>
+                    </div>
+                    <div id="editor-body" contenteditable="true" placeholder="내용을 작성하세요. 텍스트 드래그 후 색상(A)을 변경할 수 있습니다."></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <input type="text" id="post-author" placeholder="작성자" class="border rounded-lg px-4 py-2 text-sm outline-none">
+                    <div class="text-[11px] text-slate-400 flex items-center px-2">※ 관리자 권한으로 등록됩니다.</div>
+                </div>
+                
+                <button onclick="savePost()" id="save-btn" class="btn-primary">게시글 등록 완료</button>
             </div>
         </section>
-
-        <!-- 코드 복사 영역 (업데이트용) -->
-        <div id="update-area" class="hidden mt-10 p-6 bg-slate-800 rounded-2xl">
-            <p class="text-emerald-400 text-sm font-bold mb-3">✅ 데이터가 저장되었습니다. 아래 코드를 전체 복사하여 파일을 업데이트 하세요.</p>
-            <textarea id="full-code" class="w-full h-40 bg-slate-900 text-slate-400 text-[10px] p-4 rounded-lg font-mono" readonly onclick="this.select()"></textarea>
-        </div>
     </main>
 
-    <script id="post-data">
-        // 초기 데이터 (사진에 있는 내용)
+    <script>
         let posts = [
             {
                 id: 1,
                 category: '공지사항',
                 title: '시신기증 접수증 전송 후 통화의 건',
                 author: '관리자',
-                date: '04. 13. 오후 05:57',
-                content: '시신기증 접수증 전송 후 기준에는 즉시모심에 한하여 담당자와 통화하였으나 현 담당자인 주상건 차장의 요청에 의하여 모든 건에 대하여 통화를 실시하여야 합니다.\n\n즉시모심, 삼일장 구분없이 접수증 전송 후 통화하시기 바랍니다.'
-            },
-            {
-                id: 2,
-                category: '공지사항',
-                title: '성의회관 옥상 방수공사의 건',
-                author: '관리자',
-                date: '04. 13. 오후 05:51',
-                content: '금주 금요일부터 성의회관 옥상 방수공사가 진행될 예정입니다. 소음이 발생할 수 있으니 양해 부탁드립니다.'
+                date: '2026-04-13 17:57',
+                content: '시신기증 접수증 전송 후 기준에는 <font color="#ef4444"><b>즉시모심</b></font>에 한하여 담당자와 통화하였으나 현 담당자인 주상건 차장의 요청에 의하여 모든 건에 대하여 통화를 실시하여야 합니다.<br><br><u>즉시모심, 삼일장 구분없이</u> 접수증 전송 후 통화하시기 바랍니다.'
             }
         ];
-    </script>
 
-    <script>
-        function renderPosts(data = posts) {
-            const list = document.getElementById('post-list');
-            list.innerHTML = data.map(post => `
-                <div class="card p-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-3">
-                            <span class="tag-notice">${post.category}</span>
-                            <h3 class="text-lg font-bold text-slate-800">${post.title}</h3>
+        function execCommand(command, value = null) {
+            document.execCommand(command, false, value);
+            document.getElementById('editor-body').focus();
+        }
+
+        function renderPosts(targetData = posts) {
+            const container = document.getElementById('posts-container');
+            container.innerHTML = targetData.map(post => `
+                <div class="card p-5">
+                    <div class="flex justify-between items-start mb-3 border-b pb-2">
+                        <div class="flex-1">
+                            <span class="tag-inline">${post.category}</span>
+                            <span class="text-md font-bold text-slate-800 vertical-middle">${post.title}</span>
                         </div>
-                        <div class="text-xs text-slate-400 font-bold flex items-center gap-1">
-                            ✍️ ${post.author}
+                        <div class="text-right text-[10px] font-bold text-slate-400 ml-4">
+                            <div>${post.author}</div>
+                            <div>${post.date}</div>
                         </div>
                     </div>
-                    <div class="text-[11px] text-slate-400 mb-4 flex items-center gap-2">
-                        📅 ${post.date}
-                    </div>
-                    <div class="text-sm text-slate-600 leading-relaxed mb-6 whitespace-pre-wrap">${post.content}</div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="editPost(${post.id})" class="btn-edit py-2 rounded-lg font-bold text-sm shadow-sm opacity-90 hover:opacity-100">수정</button>
-                        <button onclick="deletePost(${post.id})" class="btn-delete py-2 rounded-lg font-bold text-sm shadow-sm opacity-90 hover:opacity-100">삭제</button>
+                    <div class="post-content text-[13px] text-slate-600 mb-4 whitespace-pre-wrap">${post.content}</div>
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="editPost(${post.id})" class="px-3 py-1 rounded bg-slate-100 text-slate-500 font-bold text-[11px]">수정</button>
+                        <button onclick="deletePost(${post.id})" class="px-3 py-1 rounded bg-red-50 text-red-400 font-bold text-[11px]">삭제</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function addPost() {
-            const title = document.getElementById('new-title').value;
-            const category = document.getElementById('new-category').value;
-            const content = document.getElementById('new-content').value;
-            
-            if(!title || !content) { alert('내용을 입력해주세요.'); return; }
+        function savePost() {
+            const title = document.getElementById('post-title').value;
+            const category = document.getElementById('post-category').value;
+            const author = document.getElementById('post-author').value || '관리자';
+            const content = document.getElementById('editor-body').innerHTML;
+
+            if (!title.trim() || !content.trim() || content === '<br>') {
+                alert('제목과 내용을 입력해주세요.');
+                return;
+            }
 
             const now = new Date();
-            const dateStr = `${(now.getMonth()+1).toString().padStart(2, '0')}. ${now.getDate().toString().padStart(2, '0')}. ${now.getHours() >= 12 ? '오후' : '오전'} ${ (now.getHours()%12 || 12).toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            const dateStr = now.toISOString().split('T')[0] + ' ' + now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
             const newPost = {
                 id: Date.now(),
                 category,
                 title,
-                author: '관리자',
+                author,
                 date: dateStr,
                 content
             };
 
             posts.unshift(newPost);
-            updateFile();
+            resetForm();
+            renderPosts();
+            alert('등록되었습니다.');
         }
 
         function deletePost(id) {
-            if(!confirm('삭제하시겠습니까?')) return;
+            if (!confirm('삭제하시겠습니까?')) return;
             posts = posts.filter(p => p.id !== id);
-            updateFile();
+            renderPosts();
         }
 
         function editPost(id) {
             const post = posts.find(p => p.id === id);
-            document.getElementById('new-title').value = post.title;
-            document.getElementById('new-content').value = post.content;
-            document.getElementById('new-category').value = post.category;
-            document.getElementById('submit-btn').innerText = "수정 완료 (파일 업데이트 필요)";
-            document.getElementById('submit-btn').onclick = function() {
-                post.title = document.getElementById('new-title').value;
-                post.content = document.getElementById('new-content').value;
-                post.category = document.getElementById('new-category').value;
-                updateFile();
+            if (!post) return;
+
+            document.getElementById('post-title').value = post.title;
+            document.getElementById('post-category').value = post.category;
+            document.getElementById('post-author').value = post.author;
+            document.getElementById('editor-body').innerHTML = post.content;
+            
+            document.getElementById('write-section').scrollIntoView({ behavior: 'smooth' });
+            
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.innerText = "수정 완료";
+            saveBtn.onclick = function() {
+                post.title = document.getElementById('post-title').value;
+                post.category = document.getElementById('post-category').value;
+                post.author = document.getElementById('post-author').value;
+                post.content = document.getElementById('editor-body').innerHTML;
+                
+                renderPosts();
+                resetForm();
+                alert('수정되었습니다.');
             };
-            scrollToWrite();
+        }
+
+        function resetForm() {
+            document.getElementById('post-title').value = "";
+            document.getElementById('post-author').value = "";
+            document.getElementById('editor-body').innerHTML = "";
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.innerText = "게시글 등록 완료";
+            saveBtn.onclick = savePost;
         }
 
         function searchPosts() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const filtered = posts.filter(p => p.title.toLowerCase().includes(query) || p.author.toLowerCase().includes(query));
+            const q = document.getElementById('search-box').value.toLowerCase();
+            const filtered = posts.filter(p => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q));
             renderPosts(filtered);
-        }
-
-        function scrollToWrite() {
-            document.getElementById('write-section').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function updateFile() {
-            renderPosts();
-            
-            const fullHtml = document.documentElement.outerHTML;
-            const dataMarker = 'let posts = [';
-            const endMarker = '];';
-            const startIndex = fullHtml.indexOf(dataMarker);
-            const endIndex = fullHtml.indexOf(endMarker, startIndex) + 2;
-            
-            const newDataString = `let posts = ${JSON.stringify(posts, null, 12)};`;
-            const newHtml = fullHtml.substring(0, startIndex) + newDataString + fullHtml.substring(endIndex);
-
-            document.getElementById('full-code').value = "<!DOCTYPE html>\n" + newHtml;
-            document.getElementById('update-area').classList.remove('hidden');
-            document.getElementById('update-area').scrollIntoView({ behavior: 'smooth' });
-            
-            // 초기화
-            document.getElementById('new-title').value = "";
-            document.getElementById('new-content').value = "";
-            document.getElementById('submit-btn').innerText = "게시글 등록 완료";
-            document.getElementById('submit-btn').onclick = addPost;
         }
 
         window.onload = renderPosts;
