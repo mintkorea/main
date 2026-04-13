@@ -131,7 +131,7 @@
             </div>
         </div>
 
-        <!-- 공지사항 카드 -->
+        <!-- 공지사항 카드 (Firestore 연동) -->
         <div onclick="location.href='notice.html'" class="table-card">
             <div class="table-header label-notice">최신<br>공지</div>
             <div id="latest-notice-container" class="table-body">
@@ -159,8 +159,53 @@
         </footer>
     </div>
 
+    <!-- Firebase SDK (기존 스크립트들과 함께 사용) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global 환경 변수 사용
+        const firebaseConfig = JSON.parse(window.__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = window.__app_id || 'default-app-id';
+
+        async function initFirestoreNotice() {
+            await signInAnonymously(auth);
+            const noticeRef = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
+            
+            // 실시간 리스너: 최신 글 1개만 가져와서 메인에 표시
+            onSnapshot(noticeRef, (snapshot) => {
+                const previewContainer = document.getElementById('latest-notice-container');
+                const notices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                if (notices.length === 0) {
+                    previewContainer.innerHTML = `<div class="text-[13px] font-bold text-slate-300">공지가 없습니다.</div>`;
+                    return;
+                }
+
+                // 날짜순 정렬 (내림차순)
+                notices.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                const latest = notices[0];
+                const dateStr = latest.createdAt?.toDate().toLocaleDateString() || '-';
+
+                previewContainer.innerHTML = `
+                    <div>
+                        <span class="notice-title-main">${latest.title}</span>
+                        <span class="notice-info-sub">[${latest.category || '공지'}] ${latest.author || '관리자'} · ${dateStr}</span>
+                    </div>
+                `;
+            });
+        }
+
+        // 초기 실행
+        initFirestoreNotice();
+    </script>
+
     <script>
-        const NOTICE_API_URL = "https://script.google.com/macros/s/AKfycbyZsShJ5BztRyC-eTNmCy2wfSYOd8NjpgnO-0AbfTfpQqxD-XotTs3oglQ5T0dJB-nW/exec";
+        // 기존 렌더링 로직 유지
         const EVENT_API_URL = "https://script.google.com/macros/s/AKfycbzKtqrzNK11rX4sCdDFv0lcgUcdVwsNiUnlXYc8Zjm0dJNlNV8ThwKrtqOgKBeVrP3g/exec";
         const MEAL_API_URL = "https://script.google.com/macros/s/AKfycbxZkcn8EEcGcxMaT98l_CKJTCM_0Ual_S2JefpHptm_dbEtQ5tjM00TEhU2XdqTObLh/exec";
         
@@ -184,23 +229,6 @@
             get: (key) => { const data = localStorage.getItem(key); return data ? JSON.parse(data) : null; },
             set: (key, val) => localStorage.setItem(key, JSON.stringify(val))
         };
-
-        async function fetchNoticePreview() {
-            const previewContainer = document.getElementById('latest-notice-container');
-            try {
-                const response = await fetch(`${NOTICE_API_URL}?t=${Date.now()}`);
-                const allPosts = await response.json();
-                
-                if (!allPosts || allPosts.length === 0) {
-                    previewContainer.innerHTML = `<div class="text-[13px] font-bold text-slate-300">공지가 없습니다.</div>`;
-                    return;
-                }
-                const latest = allPosts[allPosts.length - 1];
-                previewContainer.innerHTML = `<div><span class="notice-title-main">${latest[3]}</span><span class="notice-info-sub">[${latest[2]}] ${latest[1]} · ${latest[5].split(' ')[0]}</span></div>`;
-            } catch (e) { 
-                previewContainer.innerHTML = `<div class="text-[11px] text-red-400">로드 실패</div>`; 
-            }
-        }
 
         function getShiftName(d) {
             let base = new Date(baseDate); base.setHours(0,0,0,0);
@@ -336,7 +364,6 @@
             updateDutyUI();
             updateEvents(currentDate);
             updateMeal(currentDate);
-            fetchNoticePreview();
         }
 
         window.onload = () => {
