@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -62,14 +63,18 @@
         .bg-shift-B { background-color: #EF4444; color: white; }
         .bg-shift-C { background-color: #3B82F6; color: white; }
 
-        /* 행사 (User 요청: 시설명+행사명 나란히, 무조건 전체 노출, 폰트 1단계 축소) */
-        .building-badge { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 5px; display: inline-block; margin-bottom: 6px; }
+        /* [수정] 행사 레이아웃: 개행 시 자연스럽게 왼쪽부터 흐르도록 변경 */
+        .building-badge { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 5px; display: inline-block; margin-bottom: 8px; }
         .badge-hall { background-color: #dbeafe; color: #1e40af; }
         .badge-research { background-color: #f3e8ff; color: #6b21a8; }
         
-        .event-item { font-size: 13px; font-weight: 800; margin-bottom: 8px; display: flex; flex-direction: row; align-items: flex-start; gap: 4px; line-height: 1.4; }
-        .event-place { color: #3b82f6; flex-shrink: 0; white-space: normal; word-break: keep-all; } 
-        .event-name { color: #334155; flex: 1; white-space: normal; word-break: keep-all; }
+        .event-item { 
+            font-size: 13px; font-weight: 800; margin-bottom: 10px; 
+            display: block; /* flex 해제하여 텍스트가 자연스럽게 줄바꿈되게 함 */
+            line-height: 1.5; 
+        }
+        .event-place { color: #3b82f6; font-weight: 900; margin-right: 4px; } 
+        .event-name { color: #334155; word-break: keep-all; }
 
         /* 식단 */
         .meal-row { display: flex; align-items: center; padding: 7px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; }
@@ -232,18 +237,17 @@
                 
                 const formatPlace = (p) => p ? p.replace("성의교정", "").trim() : "장소미지정";
 
-                // 가로 배치 (flex-direction: row)
                 let html = `<div class="mb-4"><span class="building-badge badge-hall">성의회관</span>`;
                 html += hall.length ? hall.map(i => `
                     <div class="event-item">
-                        <span class="event-place">[${formatPlace(i.place)}]</span>
+                        <span class="event-place">📍 ${formatPlace(i.place)}</span>
                         <span class="event-name">${i.event}</span>
                     </div>`).join('') : `<div class="text-[12px] text-slate-300 ml-1">행사 없음</div>`;
                 
                 html += `</div><div><span class="building-badge badge-research">의산연</span>`;
                 html += research.length ? research.map(i => `
                     <div class="event-item">
-                        <span class="event-place text-purple-500">[${formatPlace(i.place)}]</span>
+                        <span class="event-place text-purple-500">📍 ${formatPlace(i.place)}</span>
                         <span class="event-name">${i.event}</span>
                     </div>`).join('') : `<div class="text-[12px] text-slate-300 ml-1">행사 없음</div>`;
                 html += `</div>`;
