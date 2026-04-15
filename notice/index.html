@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Table Editor</title>
+    <title>Smart Board & Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
         
         body {
             font-family: 'Pretendard', sans-serif;
-            background-color: #f8fafc;
+            background-color: #f1f5f9;
         }
 
         #editor {
-            min-height: 500px;
+            min-height: 400px;
             outline: none;
             line-height: 1.6;
         }
@@ -27,8 +27,15 @@
 
         #editor td, #editor th {
             border: 1px solid #cbd5e1;
-            padding: 12px;
+            padding: 10px;
             min-width: 50px;
+        }
+
+        #editor img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
         }
 
         /* 폰트 크기 매핑 */
@@ -40,85 +47,92 @@
         font[size="6"] { font-size: 32px; }
         font[size="7"] { font-size: 48px; }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 100;
-        }
-
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(4px);
-            z-index: 90;
-        }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 90; }
+        
+        .hidden-view { display: none; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-4xl mx-auto">
-        <!-- 상단 헤더 -->
-        <header class="mb-6 flex justify-between items-end">
+    <div class="max-w-5xl mx-auto">
+        <!-- 메인 헤더 -->
+        <header class="mb-8 flex justify-between items-end">
             <div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Smart Editor</h1>
-                <p class="text-slate-500">표 생성 및 서식 지정이 가능한 에디터</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Smart System</h1>
+                <p id="view-subtitle" class="text-slate-500">게시글 목록</p>
             </div>
-            <button onclick="saveContent()" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2">
-                저장하기
-            </button>
-        </header>
-
-        <!-- 에디터 박스 -->
-        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-            
-            <!-- 툴바 -->
-            <div class="bg-slate-50 border-b border-slate-200 p-3 flex flex-wrap gap-2 items-center">
-                <!-- 기본 서식 -->
-                <button onclick="execCmd('bold')" class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all" title="굵게"><b>B</b></button>
-                <button onclick="execCmd('italic')" class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all" title="기울임"><i>I</i></button>
-                <button onclick="execCmd('underline')" class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all" title="밑줄"><u>U</u></button>
-
-                <div class="w-px h-6 bg-slate-300 mx-1"></div>
-
-                <!-- 폰트 크기 -->
-                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-sm">
-                    <span class="text-slate-400 font-bold">Size</span>
-                    <select onchange="execCmd('fontSize', this.value)" class="outline-none bg-transparent cursor-pointer font-semibold">
-                        <option value="3">기본</option>
-                        <option value="1">매우 작게</option>
-                        <option value="2">작게</option>
-                        <option value="4">조금 크게</option>
-                        <option value="5">크게</option>
-                        <option value="6">매우 크게</option>
-                        <option value="7">최대</option>
-                    </select>
-                </div>
-
-                <!-- 색상 -->
-                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-sm">
-                    <span class="text-slate-400 font-bold">Color</span>
-                    <input type="color" onchange="execCmd('foreColor', this.value)" class="w-6 h-6 p-0 border-none bg-transparent cursor-pointer rounded-md">
-                </div>
-
-                <div class="w-px h-6 bg-slate-300 mx-1"></div>
-
-                <!-- 표 삽입 버튼 -->
-                <button onclick="toggleTableModal()" class="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-xl font-bold hover:bg-indigo-100 transition-all">
-                    <span>+</span> 표 삽입
+            <div id="header-buttons">
+                <button id="btn-write" onclick="showEditor()" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2">
+                    새 글 작성
                 </button>
             </div>
+        </header>
 
-            <!-- 편집 영역 -->
-            <div id="editor" contenteditable="true" class="p-8 md:p-12 focus:outline-none">
-                <p>내용을 입력하세요...</p>
+        <!-- 1. 목록 뷰 (ListView) -->
+        <div id="view-list" class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200">
+                        <th class="p-4 pl-8 text-slate-500 font-bold text-sm w-20">번호</th>
+                        <th class="p-4 text-slate-500 font-bold text-sm">제목</th>
+                        <th class="p-4 text-slate-500 font-bold text-sm w-32 text-center">작성일</th>
+                    </tr>
+                </thead>
+                <tbody id="post-list">
+                    <!-- 게시글이 여기에 렌더링됩니다 -->
+                </tbody>
+            </table>
+            <div id="empty-msg" class="p-20 text-center text-slate-400 font-medium">
+                등록된 게시글이 없습니다. 첫 글을 작성해보세요!
+            </div>
+        </div>
+
+        <!-- 2. 글쓰기 뷰 (EditorView) -->
+        <div id="view-editor" class="hidden-view space-y-4">
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                <!-- 제목 입력 -->
+                <div class="p-4 border-b border-slate-200">
+                    <input type="text" id="post-title" placeholder="제목을 입력하세요" class="w-full text-xl font-bold outline-none placeholder:text-slate-300">
+                </div>
+
+                <!-- 툴바 -->
+                <div class="bg-slate-50 border-b border-slate-200 p-3 flex flex-wrap gap-2 items-center">
+                    <button onclick="execCmd('bold')" class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200" title="굵게"><b>B</b></button>
+                    <button onclick="execCmd('italic')" class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200" title="기울임"><i>I</i></button>
+                    
+                    <div class="w-px h-6 bg-slate-300 mx-1"></div>
+
+                    <select onchange="execCmd('fontSize', this.value)" class="bg-white px-2 py-1 rounded-lg border border-slate-200 text-sm font-semibold outline-none">
+                        <option value="3">글자 크기</option>
+                        <option value="2">작게</option>
+                        <option value="4">크게</option>
+                        <option value="6">매우 크게</option>
+                    </select>
+
+                    <input type="color" onchange="execCmd('foreColor', this.value)" class="w-8 h-8 p-1 bg-white border border-slate-200 rounded-lg cursor-pointer" title="글자색">
+
+                    <div class="w-px h-6 bg-slate-300 mx-1"></div>
+
+                    <button onclick="toggleTableModal()" class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-bold hover:bg-slate-50">
+                        표 삽입
+                    </button>
+
+                    <!-- 파일 첨부 버튼 -->
+                    <label class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-bold hover:bg-slate-50 cursor-pointer">
+                        파일 첨부
+                        <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileUpload(event)">
+                    </label>
+                </div>
+
+                <!-- 에디터 본문 -->
+                <div id="editor" contenteditable="true" class="p-8 md:p-10 focus:outline-none"></div>
+            </div>
+
+            <!-- 하단 버튼 -->
+            <div class="flex justify-end gap-3">
+                <button onclick="showList()" class="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-all">취소</button>
+                <button onclick="savePost()" class="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-lg transition-all">작성 완료</button>
             </div>
         </div>
     </div>
@@ -126,88 +140,143 @@
     <!-- 표 설정 모달 -->
     <div id="overlay" class="overlay" onclick="toggleTableModal()"></div>
     <div id="tableModal" class="modal bg-white p-6 rounded-3xl shadow-2xl border border-slate-200 w-72">
-        <h3 class="text-lg font-black text-slate-800 mb-4">표 생성 설정</h3>
-        
+        <h3 class="text-lg font-black text-slate-800 mb-4">표 생성</h3>
         <div class="space-y-4 mb-6">
-            <div class="flex justify-between items-center">
-                <label class="text-sm font-bold text-slate-500">행(Rows)</label>
-                <input type="number" id="rowInput" value="3" min="1" max="20" class="w-20 px-3 py-2 border border-slate-200 rounded-xl text-center outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex justify-between items-center text-sm font-bold text-slate-500">
+                <label>행(Rows)</label>
+                <input type="number" id="rowInput" value="3" min="1" max="10" class="w-16 px-2 py-1 border rounded-lg text-center">
             </div>
-            <div class="flex justify-between items-center">
-                <label class="text-sm font-bold text-slate-500">열(Cols)</label>
-                <input type="number" id="colInput" value="3" min="1" max="10" class="w-20 px-3 py-2 border border-slate-200 rounded-xl text-center outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex justify-between items-center text-sm font-bold text-slate-500">
+                <label>열(Cols)</label>
+                <input type="number" id="colInput" value="3" min="1" max="10" class="w-16 px-2 py-1 border rounded-lg text-center">
             </div>
         </div>
-
         <div class="flex gap-2">
-            <button onclick="toggleTableModal()" class="flex-1 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all">취소</button>
-            <button onclick="createTable()" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">생성</button>
+            <button onclick="toggleTableModal()" class="flex-1 py-2 rounded-lg font-bold text-slate-400">취소</button>
+            <button onclick="createTable()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold">생성</button>
         </div>
-    </div>
-
-    <!-- 메시지 알림 -->
-    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold shadow-2xl transition-all opacity-0 pointer-events-none translate-y-4">
-        내용이 저장되었습니다!
     </div>
 
     <script>
-        // 명령어 실행 함수
+        let posts = []; // 게시글 저장 배열
+
+        const viewList = document.getElementById('view-list');
+        const viewEditor = document.getElementById('view-editor');
+        const postListContainer = document.getElementById('post-list');
+        const emptyMsg = document.getElementById('empty-msg');
+        const btnWrite = document.getElementById('btn-write');
+        const viewSubtitle = document.getElementById('view-subtitle');
+
+        // 1. 화면 전환: 목록 보기
+        function showList() {
+            viewList.classList.remove('hidden-view');
+            viewEditor.classList.add('hidden-view');
+            btnWrite.classList.remove('hidden-view');
+            viewSubtitle.innerText = "게시글 목록";
+            renderPosts();
+        }
+
+        // 2. 화면 전환: 에디터 보기
+        function showEditor() {
+            viewList.classList.add('hidden-view');
+            viewEditor.classList.remove('hidden-view');
+            btnWrite.classList.add('hidden-view');
+            viewSubtitle.innerText = "새 글 작성하기";
+            
+            // 입력창 초기화
+            document.getElementById('post-title').value = "";
+            document.getElementById('editor').innerHTML = "";
+            document.getElementById('editor').focus();
+        }
+
+        // 3. 게시글 저장
+        function savePost() {
+            const title = document.getElementById('post-title').value;
+            const content = document.getElementById('editor').innerHTML;
+
+            if (!title.trim()) {
+                alert("제목을 입력해주세요!");
+                return;
+            }
+
+            const newPost = {
+                id: posts.length + 1,
+                title: title,
+                content: content,
+                date: new Date().toLocaleDateString()
+            };
+
+            posts.unshift(newPost); // 최신글이 위로
+            showList();
+        }
+
+        // 4. 목록 렌더링
+        function renderPosts() {
+            postListContainer.innerHTML = "";
+            if (posts.length === 0) {
+                emptyMsg.style.display = "block";
+                return;
+            }
+
+            emptyMsg.style.display = "none";
+            posts.forEach(post => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors";
+                tr.innerHTML = `
+                    <td class="p-4 pl-8 text-slate-400 text-sm font-medium">${post.id}</td>
+                    <td class="p-4 font-bold text-slate-700">${post.title}</td>
+                    <td class="p-4 text-slate-400 text-sm text-center">${post.date}</td>
+                `;
+                tr.onclick = () => alert("상세 보기 기능은 구현 준비 중입니다!\n\n제목: " + post.title);
+                postListContainer.appendChild(tr);
+            });
+        }
+
+        // 5. 파일 업로드 처리 (본문에 이미지 삽입)
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgHtml = `<img src="${e.target.result}" alt="uploaded-image">`;
+                    execCmd('insertHTML', imgHtml);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // --- 기존 에디터 기능 ---
         function execCmd(command, value = null) {
             document.execCommand(command, false, value);
             document.getElementById('editor').focus();
         }
 
-        // 모달 토글
         function toggleTableModal() {
             const modal = document.getElementById('tableModal');
             const overlay = document.getElementById('overlay');
             const isVisible = modal.style.display === 'block';
-
             modal.style.display = isVisible ? 'none' : 'block';
             overlay.style.display = isVisible ? 'none' : 'block';
         }
 
-        // 표 생성 로직
         function createTable() {
             const rows = document.getElementById('rowInput').value;
             const cols = document.getElementById('colInput').value;
-
             let tableHtml = '<table>';
             for (let i = 0; i < rows; i++) {
                 tableHtml += '<tr>';
                 for (let j = 0; j < cols; j++) {
-                    const isHeader = i === 0;
-                    const cellBg = isHeader ? 'background-color: #f1f5f9; font-weight: bold;' : '';
-                    tableHtml += `<td style="${cellBg}">&nbsp;</td>`;
+                    tableHtml += `<td>&nbsp;</td>`;
                 }
                 tableHtml += '</tr>';
             }
             tableHtml += '</table><p><br></p>';
-
             execCmd('insertHTML', tableHtml);
             toggleTableModal();
         }
 
-        // 저장 핸들러
-        function saveContent() {
-            const content = document.getElementById('editor').innerHTML;
-            console.log('저장된 내용:', content);
-            
-            // 알림 표시
-            const toast = document.getElementById('toast');
-            toast.style.opacity = '1';
-            toast.style.transform = 'translate(-50%, 0)';
-            
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translate(-50%, 20px)';
-            }, 2000);
-        }
-
-        // 초기 포커스
-        window.onload = () => {
-            document.getElementById('editor').focus();
-        };
+        // 초기 목록 표시
+        showList();
     </script>
 </body>
 </html>
