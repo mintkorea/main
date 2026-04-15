@@ -10,76 +10,138 @@ import {
   X, 
   Trash2,
   AlertCircle,
-  Hash,
-  Info
+  Clock,
+  Layout,
+  Type,
+  Palette,
+  Table as TableIcon,
+  Bold,
+  Italic,
+  Underline,
+  List as ListIcon,
+  CheckSquare,
+  Paperclip,
+  Image as ImageIcon,
+  Download,
+  UploadCloud
 } from 'lucide-react';
 
 const App = () => {
-  const [view, setView] = useState('list'); // 'list', 'edit'
+  const [view, setView] = useState('list'); // 'list', 'write', 'view'
   const [posts, setPosts] = useState([
     { 
       id: 1, 
-      title: '주간 업무 인수인계 (2024-03-25)', 
-      author: '홍길동', 
+      title: '주간 장비 점검 결과 및 인수인계', 
+      author: '김철수 대리', 
       date: '2024-03-25', 
       category: '인수인계', 
-      content: '<p><strong>[공지]</strong> 이번 주 전산 점검이 예정되어 있습니다.</p><table border="1" style="width:100%; border-collapse:collapse;"><thead><tr><th style="background-color:#f3f4f6; padding:8px;">항목</th><th style="background-color:#f3f4f6; padding:8px;">내용</th></tr></thead><tbody><tr><td style="padding:8px;">점검 시간</td><td style="padding:8px;">03/27 22:00 ~ 24:00</td></tr><tr><td style="padding:8px;">대상 시스템</td><td style="padding:8px;">사내 그룹웨어 전체</td></tr></tbody></table>'
-    },
-    { 
-      id: 2, 
-      title: '신규 보안 가이드라인 준수 요청', 
-      author: '보안팀', 
-      date: '2024-03-24', 
-      category: '공지사항', 
-      content: '<h2 style="color:#e11d48;">보안 준수 사항</h2><p>모든 임직원은 PC 로그오프 상태를 확인하시기 바랍니다.</p>' 
+      priority: '높음',
+      attachments: [],
+      content: `
+        <h3 style="color:#2563eb;">[필독] 금주 장비 점검 사항</h3>
+        <p>현장 점검 완료하였습니다. 아래 표를 확인해주세요.</p>
+        <table style="width:100%; border-collapse:collapse; border:1px solid #e2e8f0; margin-bottom:1rem;">
+          <thead>
+            <tr style="background-color:#f8fafc;">
+              <th style="border:1px solid #e2e8f0; padding:12px; text-align:left;">점검항목</th>
+              <th style="border:1px solid #e2e8f0; padding:12px; text-align:left;">상태</th>
+              <th style="border:1px solid #e2e8f0; padding:12px; text-align:left;">비고</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border:1px solid #e2e8f0; padding:12px;">서버실 온도 체크</td>
+              <td style="border:1px solid #e2e8f0; padding:12px; color:green;">정상 (22도)</td>
+              <td style="border:1px solid #e2e8f0; padding:12px;">특이사항 없음</td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #e2e8f0; padding:12px;">백업 스토리지</td>
+              <td style="border:1px solid #e2e8f0; padding:12px; color:orange;">주의</td>
+              <td style="border:1px solid #e2e8f0; padding:12px;">용량 85% 도달</td>
+            </tr>
+          </tbody>
+        </table>
+      `
     }
   ]);
+  
   const [currentPost, setCurrentPost] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
   
-  // 에디터 관련 Ref
   const editorRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // 에디터 명령어 실행 함수
+  // 에디터 명령어 실행
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
     editorRef.current?.focus();
+  };
+
+  // 파일 처리 로직 (이미지 미리보기용 Base64 변환 포함)
+  const handleFiles = (files) => {
+    const newFiles = Array.from(files).map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      size: (file.size / 1024).toFixed(1) + ' KB',
+      type: file.type,
+      file: file,
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    }));
+    setAttachedFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  const removeFile = (id) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== id));
   };
 
   const handleSave = () => {
     const title = document.getElementById('post-title').value;
     const category = document.getElementById('post-category').value;
     const author = document.getElementById('post-author').value;
+    const priority = document.getElementById('post-priority').value;
     const content = editorRef.current.innerHTML;
 
-    if (!title) {
-      alert('제목을 입력해주세요.');
+    if (!title || !author) {
+      alert('제목과 작성자를 입력해주세요.');
       return;
     }
 
-    if (currentPost) {
-      // 수정
-      setPosts(posts.map(p => p.id === currentPost.id ? { ...p, title, category, author, content } : p));
+    const postData = {
+      id: currentPost?.id || Date.now(),
+      title,
+      category,
+      author,
+      priority,
+      date: currentPost?.date || new Date().toISOString().split('T')[0],
+      content,
+      attachments: attachedFiles
+    };
+
+    if (currentPost && view === 'write') {
+      setPosts(posts.map(p => p.id === currentPost.id ? postData : p));
     } else {
-      // 신규 등록
-      const newPost = {
-        id: Date.now(),
-        title,
-        category,
-        author,
-        date: new Date().toISOString().split('T')[0],
-        content
-      };
-      setPosts([newPost, ...posts]);
+      setPosts([postData, ...posts]);
     }
+    
     setView('list');
     setCurrentPost(null);
+    setAttachedFiles([]);
   };
 
-  const deletePost = (id) => {
-    if (confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
-      setPosts(posts.filter(p => p.id !== id));
-    }
+  const openWrite = (post = null) => {
+    setCurrentPost(post);
+    setAttachedFiles(post?.attachments || []);
+    setView('write');
   };
 
   const filteredPosts = posts.filter(p => 
@@ -88,219 +150,287 @@ const App = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-xl text-indigo-600 cursor-pointer" onClick={() => setView('list')}>
-            <FileText className="h-6 w-6" />
-            <span>HQ Handover</span>
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+      {/* CSS For Table Styles in Preview */}
+      <style>{`
+        .handover-content table { width: 100% !important; border-collapse: collapse !important; margin: 1rem 0 !important; }
+        .handover-content th, .handover-content td { border: 1px solid #e2e8f0 !important; padding: 12px !important; text-align: left !important; }
+        .handover-content th { background-color: #f8fafc !important; font-weight: 600 !important; }
+      `}</style>
+
+      {/* Navigation */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm px-4">
+        <div className="max-w-6xl mx-auto h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('list')}>
+            <div className="bg-indigo-600 p-1.5 rounded-lg"><Layout className="h-5 w-5 text-white" /></div>
+            <span className="font-bold text-lg tracking-tight">Handover <span className="text-indigo-600">Sync</span></span>
           </div>
           <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-            <span>{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <Clock className="h-4 w-4" />
+            <span>{new Date().toLocaleDateString()}</span>
           </div>
         </div>
-      </header>
+      </nav>
 
-      {view === 'list' ? (
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold mb-1 text-slate-800">게시판 목록</h1>
-              <p className="text-sm text-slate-500">공지사항 및 업무 인수인계 사항을 확인하세요.</p>
-            </div>
-            <div className="flex gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:flex-none">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="검색어 입력"
-                  className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-indigo-500 outline-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {view === 'list' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+              <div>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">업무 게시판</h1>
+                <p className="text-slate-500 mt-1 font-medium">인수인계 및 공지사항을 관리하세요.</p>
               </div>
-              <button 
-                onClick={() => { setCurrentPost(null); setView('edit'); }}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-all shadow-sm"
-              >
-                <Plus className="h-4 w-4" /> 작성하기
-              </button>
+              <div className="flex gap-2 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="검색..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => openWrite()}
+                  className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all shadow-md flex items-center gap-2 font-bold whitespace-nowrap"
+                >
+                  <Plus className="h-5 w-5" /> 작성하기
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="grid gap-4">
-            {filteredPosts.map(post => (
-              <div 
-                key={post.id}
-                className="bg-white p-5 rounded-xl border border-slate-200 hover:shadow-md transition-shadow cursor-pointer group flex flex-col md:flex-row md:items-center gap-4"
-                onClick={() => { setCurrentPost(post); setView('edit'); }}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${post.category === '공지사항' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
-                      {post.category}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPosts.map(post => (
+                <div 
+                  key={post.id}
+                  onClick={() => { setCurrentPost(post); setView('view'); }}
+                  className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-xl transition-all cursor-pointer group flex flex-col h-full"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={`text-[10px] px-2 py-1 rounded-md font-bold uppercase ${
+                      post.priority === '긴급' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'
+                    }`}>
+                      {post.priority}
                     </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> {post.date}
-                    </span>
+                    {post.attachments?.length > 0 && <Paperclip className="h-4 w-4 text-slate-400" />}
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                  <h3 className="text-lg font-bold text-slate-800 mb-3 line-clamp-2 group-hover:text-indigo-600">
                     {post.title}
                   </h3>
-                </div>
-                <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 pt-3 md:pt-0">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <User className="h-4 w-4" />
-                    <span className="text-sm font-medium">{post.author}</span>
+                  <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-semibold text-slate-400">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <User className="h-3.5 w-3.5" /> {post.author}
+                    </div>
+                    <span>{post.date}</span>
                   </div>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); deletePost(post.id); }}
-                    className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
                 </div>
-              </div>
-            ))}
-            {filteredPosts.length === 0 && (
-              <div className="py-20 text-center text-slate-400">
-                <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>작성된 게시글이 없습니다.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <button 
-              onClick={() => setView('list')}
-              className="flex items-center gap-1 text-slate-500 hover:text-indigo-600 transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" /> 목록으로
-            </button>
-            <div className="flex gap-2">
-              <button 
-                onClick={handleSave}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 shadow-sm font-medium"
-              >
-                <Save className="h-4 w-4" /> 저장하기
-              </button>
+              ))}
             </div>
           </div>
+        )}
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
-            {/* Metadata Fields */}
-            <div className="p-6 border-b border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50">
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">제목</label>
-                <input 
-                  id="post-title"
-                  type="text" 
-                  defaultValue={currentPost?.title}
-                  placeholder="공지사항 또는 인수인계 제목을 입력하세요"
-                  className="w-full bg-white border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
-                />
+        {view === 'write' && (
+          <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-400">
+            <div className="flex items-center justify-between mb-6">
+              <button onClick={() => setView('list')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold">
+                <ChevronLeft className="h-5 w-5" /> 취소
+              </button>
+              <button onClick={handleSave} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 shadow-lg flex items-center gap-2 font-bold transition-all">
+                <Save className="h-5 w-5" /> 저장 완료
+              </button>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden mb-10">
+              <div className="p-6 border-b border-slate-100 bg-slate-50/50 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">제목</label>
+                  <input id="post-title" type="text" defaultValue={currentPost?.title} className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-500 font-bold" placeholder="제목을 입력하세요" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">분류</label>
+                  <select id="post-category" defaultValue={currentPost?.category || '인수인계'} className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+                    <option value="인수인계">인수인계</option>
+                    <option value="공지사항">공지사항</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">우선순위</label>
+                  <select id="post-priority" defaultValue={currentPost?.priority || '보통'} className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+                    <option value="보통">보통</option>
+                    <option value="높음">높음</option>
+                    <option value="긴급">긴급</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">작성자</label>
+                  <input id="post-author" type="text" defaultValue={currentPost?.author} className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-500 font-bold" placeholder="성함 입력" />
+                </div>
+              </div>
+
+              {/* Editor Toolbar */}
+              <div className="flex flex-wrap items-center gap-1 p-3 border-b border-slate-100 bg-white sticky top-0 z-10">
+                <button onClick={() => execCommand('bold')} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><Bold className="h-4 w-4" /></button>
+                <button onClick={() => execCommand('italic')} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><Italic className="h-4 w-4" /></button>
+                <div className="h-4 w-px bg-slate-200 mx-1"></div>
+                <button 
+                  onClick={() => {
+                    const table = `<table style="width:100%; border-collapse:collapse; border:1px solid #e2e8f0; margin:15px 0;">
+                      <tr style="background-color:#f8fafc;"><th style="border:1px solid #e2e8f0; padding:10px;">항목</th><th style="border:1px solid #e2e8f0; padding:10px;">내용</th></tr>
+                      <tr><td style="border:1px solid #e2e8f0; padding:10px;"></td><td style="border:1px solid #e2e8f0; padding:10px;"></td></tr>
+                    </table><p><br></p>`;
+                    execCommand('insertHTML', table);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors"
+                >
+                  <TableIcon className="h-3.5 w-3.5" /> 표 삽입
+                </button>
+              </div>
+
+              {/* Content Editor */}
+              <div 
+                ref={editorRef}
+                contentEditable
+                dangerouslySetInnerHTML={{ __html: currentPost?.content || '<p><br></p>' }}
+                className="p-8 min-h-[400px] outline-none text-slate-700 leading-relaxed handover-content"
+              ></div>
+
+              {/* File Attachment Area */}
+              <div className="p-6 border-t border-slate-100 bg-slate-50/30">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-3">파일 첨부</label>
+                
+                <div 
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={onDrop}
+                  className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center transition-all ${
+                    isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  <UploadCloud className={`h-10 w-10 mb-2 transition-colors ${isDragging ? 'text-indigo-500' : 'text-slate-300'}`} />
+                  <p className="text-sm font-bold text-slate-500">파일을 드래그하여 놓거나 클릭하여 선택하세요</p>
+                  <p className="text-xs text-slate-400 mt-1">이미지, 문서 등 (최대 10MB)</p>
+                  <button 
+                    onClick={() => fileInputRef.current.click()}
+                    className="mt-4 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-200"
+                  >
+                    파일 선택
+                  </button>
+                  <input type="file" ref={fileInputRef} className="hidden" multiple onChange={(e) => handleFiles(e.target.files)} />
+                </div>
+
+                {/* Attached Files Preview Grid */}
+                {attachedFiles.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    {attachedFiles.map(file => (
+                      <div key={file.id} className="relative group bg-white border border-slate-200 rounded-xl p-2 shadow-sm overflow-hidden">
+                        <button 
+                          onClick={() => removeFile(file.id)}
+                          className="absolute top-1 right-1 z-10 bg-white/80 hover:bg-rose-500 hover:text-white p-1 rounded-full shadow-md text-slate-400 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        
+                        <div className="aspect-square rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden mb-2">
+                          {file.preview ? (
+                            <img src={file.preview} alt="preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <FileText className="h-8 w-8 text-slate-300" />
+                          )}
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-600 truncate px-1">{file.name}</p>
+                        <p className="text-[9px] text-slate-400 px-1">{file.size}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'view' && currentPost && (
+          <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
+            <div className="flex items-center justify-between mb-8">
+              <button onClick={() => setView('list')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold transition-colors">
+                <ChevronLeft className="h-5 w-5" /> 목록으로
+              </button>
+              <div className="flex gap-2">
+                <button onClick={() => openWrite(currentPost)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">수정</button>
+                <button 
+                  onClick={() => { setPosts(posts.filter(p => p.id !== currentPost.id)); setView('list'); }}
+                  className="px-4 py-2 bg-rose-50 text-rose-500 rounded-xl font-bold hover:bg-rose-100 transition-colors"
+                >삭제</button>
+              </div>
+            </div>
+
+            <article className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+              <div className="p-8 md:p-12 border-b border-slate-100 bg-slate-50/30">
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="px-3 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest">{currentPost.priority}</span>
+                  <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">{currentPost.category}</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight mb-8">
+                  {currentPost.title}
+                </h1>
+                <div className="flex items-center gap-6 text-sm font-bold text-slate-500">
+                  <div className="flex items-center gap-2"><User className="h-4 w-4" /> {currentPost.author}</div>
+                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {currentPost.date}</div>
+                </div>
+              </div>
+              
+              <div 
+                className="p-8 md:p-12 handover-content text-slate-700 leading-relaxed min-h-[300px]"
+                dangerouslySetInnerHTML={{ __html: currentPost.content }}
+              ></div>
+
+              {/* Attachments Display in View Mode */}
+              {currentPost.attachments && currentPost.attachments.length > 0 && (
+                <div className="p-8 md:p-12 border-t border-slate-50 bg-slate-50/20">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Paperclip className="h-3.5 w-3.5" /> 첨부 파일 ({currentPost.attachments.length})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {currentPost.attachments.map(file => (
+                      <div key={file.id} className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm group hover:border-indigo-300 transition-colors">
+                        <div className="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {file.preview ? (
+                            <img src={file.preview} alt="attachment" className="w-full h-full object-cover" />
+                          ) : (
+                            <FileText className="h-6 w-6 text-slate-300" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-700 truncate">{file.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">{file.size}</p>
+                        </div>
+                        <button className="p-2 text-slate-300 group-hover:text-indigo-600 transition-colors">
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </article>
+
+            <div className="mt-8 mb-20 bg-emerald-50 border border-emerald-100 rounded-2xl p-6 flex items-start gap-4">
+              <div className="bg-emerald-500 p-2 rounded-lg text-white shadow-lg shadow-emerald-200">
+                <CheckSquare className="h-5 w-5" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">카테고리</label>
-                <select 
-                  id="post-category"
-                  defaultValue={currentPost?.category || '인수인계'}
-                  className="w-full bg-white border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="인수인계">업무 인수인계</option>
-                  <option value="공지사항">공지사항</option>
-                  <option value="기타">기타</option>
-                </select>
+                <h4 className="font-bold text-emerald-900">내용 확인 및 수락</h4>
+                <p className="text-emerald-700 text-sm mt-1">이 업무 공지 내용을 확인하셨다면 아래 버튼을 클릭하여 수락을 완료해 주세요.</p>
+                <button className="mt-4 bg-emerald-600 text-white px-5 py-2 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-700 transition-all active:scale-95">확인 완료</button>
               </div>
-              <div className="md:col-span-1">
-                <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">작성자</label>
-                <input 
-                  id="post-author"
-                  type="text" 
-                  defaultValue={currentPost?.author}
-                  placeholder="작성자 성함"
-                  className="w-full bg-white border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-1 p-3 border-b border-slate-100 bg-white sticky top-16 z-10">
-              <button onClick={() => execCommand('bold')} className="p-2 hover:bg-slate-100 rounded font-bold w-10">B</button>
-              <button onClick={() => execCommand('italic')} className="p-2 hover:bg-slate-100 rounded italic w-10">I</button>
-              <button onClick={() => execCommand('underline')} className="p-2 hover:bg-slate-100 rounded underline w-10">U</button>
-              <div className="w-px h-6 bg-slate-200 mx-1"></div>
-              
-              <select onChange={(e) => execCommand('fontSize', e.target.value)} className="p-1 text-sm border-none bg-slate-50 rounded">
-                <option value="3">보통 크기</option>
-                <option value="1">매우 작게</option>
-                <option value="2">작게</option>
-                <option value="4">약간 크게</option>
-                <option value="5">크게</option>
-                <option value="6">매우 크게</option>
-                <option value="7">최대 크기</option>
-              </select>
-
-              <div className="flex items-center gap-1 ml-2">
-                <span className="text-xs text-slate-400">색상:</span>
-                <input 
-                  type="color" 
-                  onChange={(e) => execCommand('foreColor', e.target.value)}
-                  className="w-6 h-6 border-none cursor-pointer p-0 bg-transparent"
-                />
-              </div>
-
-              <div className="w-px h-6 bg-slate-200 mx-1"></div>
-              
-              <button onClick={() => execCommand('insertUnorderedList')} className="p-2 hover:bg-slate-100 rounded text-sm font-bold">● 목록</button>
-              <button onClick={() => execCommand('insertOrderedList')} className="p-2 hover:bg-slate-100 rounded text-sm font-bold">1. 목록</button>
-              
-              <div className="w-px h-6 bg-slate-200 mx-1"></div>
-              
-              {/* 표 만들기 간단 버튼 */}
-              <button 
-                onClick={() => {
-                  const rows = prompt('행(Row) 개수:', '3');
-                  const cols = prompt('열(Column) 개수:', '2');
-                  if (rows && cols) {
-                    let table = `<table border="1" style="width:100%; border-collapse:collapse; margin:10px 0;">`;
-                    for(let i=0; i<rows; i++){
-                      table += `<tr>`;
-                      for(let j=0; j<cols; j++){
-                        table += `<td style="padding:8px; border:1px solid #ccc;">내용</td>`;
-                      }
-                      table += `</tr>`;
-                    }
-                    table += `</table>`;
-                    execCommand('insertHTML', table);
-                  }
-                }} 
-                className="p-2 hover:bg-indigo-50 text-indigo-600 rounded text-sm font-bold"
-              >
-                + 표 삽입
-              </button>
-            </div>
-
-            {/* Editable Content Area */}
-            <div 
-              ref={editorRef}
-              contentEditable
-              dangerouslySetInnerHTML={{ __html: currentPost?.content || '' }}
-              className="p-8 min-h-[500px] outline-none prose prose-slate max-w-none"
-              style={{ fontSize: '16px' }}
-            >
             </div>
           </div>
-          
-          <div className="mt-4 flex items-center gap-2 text-slate-400 text-xs px-2">
-            <Info className="h-3 w-3" />
-            <span>편집기에서 표의 칸을 클릭해 내용을 수정할 수 있습니다. 텍스트를 드래그하고 도구 모음을 이용해 스타일을 적용하세요.</span>
-          </div>
-        </div>
-      )}
+        )}
+      </main>
+
+      <footer className="py-12 border-t border-slate-200 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
+        Handover Professional Management System &copy; 2024
+      </footer>
     </div>
   );
 };
