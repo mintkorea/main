@@ -3,244 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Board & Editor</title>
+    <title>Smart Board Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
         
         body {
             font-family: 'Pretendard', sans-serif;
-            background-color: #f8fafc;
+            background-color: #f1f5f9;
+            color: #1e293b;
         }
 
         .editor-content {
-            min-height: 400px;
+            min-height: 450px;
             outline: none;
             line-height: 1.6;
         }
 
+        /* 에디터 내 테이블 스타일 */
         .editor-content table {
             width: 100%;
             border-collapse: collapse;
             margin: 1rem 0;
+            border: 1px solid #e2e8f0;
         }
 
         .editor-content td, .editor-content th {
-            border: 1px solid #cbd5e1;
-            padding: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 12px;
             min-width: 50px;
         }
 
-        .editor-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin: 10px 0;
+        /* HTML 프리뷰 Iframe 스타일 */
+        .html-preview-container {
+            border: 2px solid #6366f1;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 0;
+            background: white;
+            position: relative;
+        }
+        
+        .html-preview-header {
+            background: #6366f1;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
         }
 
-        /* HTML 소스 삽입 시 스타일 */
-        .html-snippet {
-            background: #f1f5f9;
-            padding: 1rem;
-            border-radius: 8px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            border-left: 4px solid #6366f1;
-            margin: 10px 0;
+        .html-preview-frame {
+            width: 100%;
+            height: 400px;
+            border: none;
+            display: block;
         }
 
-        font[size="1"] { font-size: 12px; }
-        font[size="2"] { font-size: 14px; }
-        font[size="3"] { font-size: 16px; }
-        font[size="4"] { font-size: 20px; }
-        font[size="5"] { font-size: 24px; }
-        font[size="6"] { font-size: 32px; }
-        font[size="7"] { font-size: 48px; }
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; }
-        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 90; }
-        
-        .view-section { display: none; }
-        .view-section.active { display: block; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 90; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-10">
 
     <div class="max-w-5xl mx-auto">
-        <!-- 상단 헤더 -->
-        <header class="mb-8 flex justify-between items-end">
+        <!-- 헤더 -->
+        <header class="mb-10 flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Smart System</h1>
-                <p id="view-subtitle" class="text-slate-500 font-medium">게시글 목록</p>
+                <h1 class="text-4xl font-black text-indigo-600 tracking-tighter">BOARD<span class="text-slate-900">PRO</span></h1>
+                <p id="view-status" class="text-slate-500 font-medium mt-1">게시글 목록을 확인하세요.</p>
             </div>
-            <div id="header-actions">
-                <button id="btn-write-trigger" onclick="showEditor()" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2">
-                    새 글 작성
-                </button>
-            </div>
+            <button id="btn-new-post" onclick="showEditor()" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-xl hover:shadow-indigo-200 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                새 글 쓰기
+            </button>
         </header>
 
-        <!-- 1. 목록 화면 (ListView) -->
+        <!-- 1. 리스트 뷰 -->
         <section id="section-list" class="view-section active">
-            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200">
-                            <th class="p-4 pl-8 text-slate-500 font-bold text-sm w-20">번호</th>
-                            <th class="p-4 text-slate-500 font-bold text-sm">제목</th>
-                            <th class="p-4 text-slate-500 font-bold text-sm w-32 text-center">작성일</th>
+            <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="p-5 pl-10 text-slate-400 font-bold text-xs uppercase tracking-wider w-24">NO</th>
+                            <th class="p-5 text-slate-400 font-bold text-xs uppercase tracking-wider">TITLE</th>
+                            <th class="p-5 text-slate-400 font-bold text-xs uppercase tracking-wider w-40 text-center">DATE</th>
                         </tr>
                     </thead>
-                    <tbody id="post-list-body">
-                        <!-- 게시글 렌더링 영역 -->
-                    </tbody>
+                    <tbody id="list-body"></tbody>
                 </table>
-                <div id="empty-msg" class="p-20 text-center text-slate-400 font-medium hidden">
-                    등록된 게시글이 없습니다. 첫 글을 작성해보세요!
+                <div id="list-empty" class="py-32 text-center hidden">
+                    <div class="text-slate-300 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <p class="text-slate-400 font-medium">등록된 게시글이 없습니다.</p>
                 </div>
             </div>
         </section>
 
-        <!-- 2. 글쓰기 화면 (EditorView) -->
-        <section id="section-editor" class="view-section space-y-4">
-            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-200">
-                    <input type="text" id="post-title-input" placeholder="제목을 입력하세요" class="w-full text-xl font-bold outline-none placeholder:text-slate-300">
+        <!-- 2. 에디터 뷰 (쓰기/수정) -->
+        <section id="section-editor" class="view-section">
+            <div class="bg-white rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100">
+                    <input type="text" id="editor-title" placeholder="글 제목을 입력하세요" class="w-full text-2xl font-black outline-none placeholder:text-slate-200">
                 </div>
-
-                <!-- 툴바 -->
-                <div class="bg-slate-50 border-b border-slate-200 p-3 flex flex-wrap gap-2 items-center">
-                    <button onclick="execCmd('bold')" class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 font-bold">B</button>
-                    <button onclick="execCmd('italic')" class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 italic">I</button>
-                    <div class="w-px h-6 bg-slate-300 mx-1"></div>
-                    <select onchange="execCmd('fontSize', this.value)" class="bg-white px-2 py-1 rounded-lg border border-slate-200 text-sm font-semibold outline-none">
-                        <option value="3">크기</option>
+                
+                <!-- 에디터 툴바 -->
+                <div class="bg-slate-50/80 backdrop-blur-sm border-b border-slate-100 p-3 flex flex-wrap gap-2">
+                    <button onclick="execCmd('bold')" class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all font-black">B</button>
+                    <button onclick="execCmd('italic')" class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all italic font-serif">I</button>
+                    <button onclick="execCmd('underline')" class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all underline">U</button>
+                    <div class="w-px h-6 bg-slate-200 my-auto mx-1"></div>
+                    <select onchange="execCmd('fontSize', this.value)" class="bg-white px-3 py-1 rounded-xl border border-slate-200 text-sm font-bold outline-none">
+                        <option value="3">글자 크기</option>
+                        <option value="1">매우 작게</option>
                         <option value="2">작게</option>
                         <option value="4">크게</option>
                         <option value="6">매우 크게</option>
                     </select>
-                    <input type="color" onchange="execCmd('foreColor', this.value)" class="w-8 h-8 p-1 bg-white border border-slate-200 rounded-lg cursor-pointer">
-                    <div class="w-px h-6 bg-slate-300 mx-1"></div>
-                    <button onclick="toggleTableModal()" class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-bold hover:bg-slate-50">표 삽입</button>
+                    <input type="color" onchange="execCmd('foreColor', this.value)" class="w-10 h-10 p-1.5 bg-white border border-slate-200 rounded-xl cursor-pointer">
+                    <div class="w-px h-6 bg-slate-200 my-auto mx-1"></div>
+                    <button onclick="toggleTableModal()" class="bg-white px-4 py-1 rounded-xl border border-slate-200 text-sm font-bold hover:bg-indigo-50 hover:text-indigo-600 transition-all">표 삽입</button>
                     
-                    <!-- 파일 첨부 (HTML 및 이미지 지원) -->
-                    <label class="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-200 text-sm font-bold hover:bg-indigo-100 cursor-pointer">
-                        파일 첨부 (HTML/이미지)
+                    <label class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-1 rounded-xl text-sm font-bold hover:bg-indigo-700 cursor-pointer transition-all shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        파일 첨부 (HTML/IMG)
                         <input type="file" id="file-input" class="hidden" accept="image/*, .html" onchange="handleFileUpload(event)">
                     </label>
                 </div>
 
-                <div id="editor-body" contenteditable="true" class="editor-content p-8 md:p-10 focus:outline-none"></div>
+                <div id="editor-body" contenteditable="true" class="editor-content p-8 md:p-12 focus:outline-none"></div>
             </div>
-            <div class="flex justify-end gap-3">
-                <button onclick="showList()" class="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-all">취소</button>
-                <button onclick="savePost()" class="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-lg transition-all">저장하기</button>
+            
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="showList()" class="px-8 py-3 rounded-2xl font-bold text-slate-400 hover:bg-slate-200 transition-all">취소</button>
+                <button id="btn-save" onclick="savePost()" class="bg-slate-900 text-white px-10 py-3 rounded-2xl font-bold hover:bg-black shadow-xl transition-all">저장 완료</button>
             </div>
         </section>
 
-        <!-- 3. 상세 보기 화면 (ReadView) -->
-        <section id="section-read" class="view-section space-y-4">
-            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div class="p-6 md:p-8 border-b border-slate-100">
-                    <h2 id="read-title" class="text-3xl font-black text-slate-900 mb-2"></h2>
-                    <p id="read-date" class="text-slate-400 text-sm font-medium"></p>
+        <!-- 3. 읽기 뷰 -->
+        <section id="section-read" class="view-section">
+            <div class="bg-white rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden">
+                <div class="p-8 md:p-12 border-b border-slate-50 bg-slate-50/30">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="read-title" class="text-4xl font-black text-slate-900 leading-tight"></h2>
+                        <div class="flex gap-2">
+                            <button onclick="editCurrentPost()" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="수정">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button onclick="deleteCurrentPost()" class="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all" title="삭제">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="read-info" class="text-slate-400 font-medium flex items-center gap-2">
+                        <span id="read-date"></span>
+                    </p>
                 </div>
-                <div id="read-content" class="editor-content p-8 md:p-10 bg-white">
-                    <!-- 상세 내용이 여기에 표시됩니다 -->
-                </div>
+                <div id="read-content" class="editor-content p-8 md:p-12"></div>
             </div>
-            <div class="flex justify-between items-center">
-                <button onclick="deleteCurrentPost()" class="text-red-500 font-bold hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">삭제</button>
-                <button onclick="showList()" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-slate-800 shadow-lg transition-all">목록으로</button>
+            <div class="mt-8 text-center">
+                <button onclick="showList()" class="inline-flex items-center gap-2 bg-slate-900 text-white px-12 py-4 rounded-2xl font-bold hover:bg-black shadow-2xl transition-all">
+                    목록으로 돌아가기
+                </button>
             </div>
         </section>
     </div>
 
-    <!-- 표 설정 모달 -->
+    <!-- 표 모달 -->
     <div id="overlay" class="overlay" onclick="toggleTableModal()"></div>
-    <div id="tableModal" class="modal bg-white p-6 rounded-3xl shadow-2xl border border-slate-200 w-72">
-        <h3 class="text-lg font-black text-slate-800 mb-4">표 생성</h3>
-        <div class="space-y-4 mb-6">
-            <div class="flex justify-between items-center text-sm font-bold text-slate-500">
-                <label>행(Rows)</label>
-                <input type="number" id="rowInput" value="3" min="1" max="10" class="w-16 px-2 py-1 border rounded-lg text-center">
+    <div id="table-modal" class="modal bg-white p-8 rounded-[2rem] shadow-2xl border border-slate-200 w-80">
+        <h3 class="text-xl font-black text-slate-800 mb-6">표 만들기</h3>
+        <div class="space-y-5 mb-8">
+            <div class="flex justify-between items-center">
+                <label class="font-bold text-slate-500">줄 (Rows)</label>
+                <input type="number" id="row-count" value="3" min="1" max="20" class="w-20 px-3 py-2 border rounded-xl text-center font-bold">
             </div>
-            <div class="flex justify-between items-center text-sm font-bold text-slate-500">
-                <label>열(Cols)</label>
-                <input type="number" id="colInput" value="3" min="1" max="10" class="w-16 px-2 py-1 border rounded-lg text-center">
+            <div class="flex justify-between items-center">
+                <label class="font-bold text-slate-500">칸 (Cols)</label>
+                <input type="number" id="col-count" value="3" min="1" max="10" class="w-20 px-3 py-2 border rounded-xl text-center font-bold">
             </div>
         </div>
-        <div class="flex gap-2">
-            <button onclick="toggleTableModal()" class="flex-1 py-2 rounded-lg font-bold text-slate-400">취소</button>
-            <button onclick="createTable()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold">생성</button>
+        <div class="flex gap-3">
+            <button onclick="toggleTableModal()" class="flex-1 py-3 rounded-xl font-bold text-slate-400 hover:bg-slate-50 transition-all">취소</button>
+            <button onclick="insertTable()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all">생성</button>
         </div>
     </div>
 
     <script>
-        // 게시글 데이터 관리 (인메모리)
+        // 데이터 저장소
         let posts = [];
-        let currentReadId = null;
+        let currentPostId = null; // 수정 시 사용
+        let isEditMode = false;
 
-        // 섹션 요소들
         const sections = {
             list: document.getElementById('section-list'),
             editor: document.getElementById('section-editor'),
             read: document.getElementById('section-read')
         };
-        const subtitle = document.getElementById('view-subtitle');
-        const btnWriteTrigger = document.getElementById('btn-write-trigger');
 
-        // 1. 화면 전환 함수
-        function switchView(viewName) {
-            Object.values(sections).forEach(s => s.classList.remove('active'));
-            sections[viewName].classList.add('active');
+        // 1. 화면 전환
+        function switchSection(name) {
+            Object.keys(sections).forEach(key => {
+                sections[key].classList.toggle('active', key === name);
+            });
+            
+            const status = document.getElementById('view-status');
+            const btnNew = document.getElementById('btn-new-post');
 
-            if (viewName === 'list') {
-                subtitle.innerText = "게시글 목록";
-                btnWriteTrigger.style.display = "flex";
-                renderPostList();
-            } else if (viewName === 'editor') {
-                subtitle.innerText = "게시글 작성";
-                btnWriteTrigger.style.display = "none";
-            } else if (viewName === 'read') {
-                subtitle.innerText = "게시글 읽기";
-                btnWriteTrigger.style.display = "none";
+            if (name === 'list') {
+                status.innerText = "게시글 목록을 확인하세요.";
+                btnNew.style.display = "flex";
+                renderList();
+            } else if (name === 'editor') {
+                status.innerText = isEditMode ? "글을 수정하고 있습니다." : "새로운 글을 작성합니다.";
+                btnNew.style.display = "none";
+            } else if (name === 'read') {
+                status.innerText = "상세 내용을 확인하세요.";
+                btnNew.style.display = "none";
             }
+            window.scrollTo(0,0);
         }
 
-        function showList() { switchView('list'); }
-        function showEditor() { 
-            document.getElementById('post-title-input').value = "";
+        function showList() { switchSection('list'); }
+        
+        function showEditor() {
+            isEditMode = false;
+            currentPostId = null;
+            document.getElementById('editor-title').value = "";
             document.getElementById('editor-body').innerHTML = "";
-            switchView('editor'); 
+            document.getElementById('btn-save').innerText = "저장 완료";
+            switchSection('editor');
         }
 
-        // 2. 게시글 저장
+        // 2. 게시글 저장 (신규/수정 공용)
         function savePost() {
-            const title = document.getElementById('post-title-input').value;
+            const title = document.getElementById('editor-title').value.trim();
             const content = document.getElementById('editor-body').innerHTML;
 
-            if (!title.trim()) {
-                showToast("제목을 입력해주세요!");
+            if (!title) {
+                alert("제목을 입력해주세요!");
                 return;
             }
 
-            const newPost = {
-                id: Date.now(),
-                title: title,
-                content: content,
-                date: new Date().toLocaleString('ko-KR')
-            };
+            if (isEditMode) {
+                // 수정
+                const idx = posts.findIndex(p => p.id === currentPostId);
+                if (idx !== -1) {
+                    posts[idx].title = title;
+                    posts[idx].content = content;
+                    posts[idx].lastEdit = new Date().toLocaleString();
+                }
+            } else {
+                // 신규 등록
+                const newPost = {
+                    id: Date.now(),
+                    title: title,
+                    content: content,
+                    date: new Date().toLocaleString()
+                };
+                posts.unshift(newPost);
+            }
 
-            posts.unshift(newPost);
             showList();
         }
 
         // 3. 목록 렌더링
-        function renderPostList() {
-            const tbody = document.getElementById('post-list-body');
-            const empty = document.getElementById('empty-msg');
-            tbody.innerHTML = "";
+        function renderList() {
+            const body = document.getElementById('list-body');
+            const empty = document.getElementById('list-empty');
+            body.innerHTML = "";
 
             if (posts.length === 0) {
                 empty.classList.remove('hidden');
@@ -250,109 +301,130 @@
             empty.classList.add('hidden');
             posts.forEach((post, index) => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors";
+                tr.className = "border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer transition-all group";
                 tr.innerHTML = `
-                    <td class="p-4 pl-8 text-slate-400 text-sm font-medium">${posts.length - index}</td>
-                    <td class="p-4 font-bold text-slate-700">${post.title}</td>
-                    <td class="p-4 text-slate-400 text-sm text-center">${post.date.split(' ')[0]}</td>
+                    <td class="p-6 pl-10 text-slate-300 font-black text-sm group-hover:text-indigo-400 transition-colors">${posts.length - index}</td>
+                    <td class="p-6 font-bold text-slate-700 text-lg">${post.title}</td>
+                    <td class="p-6 text-slate-400 text-sm text-center font-medium">${post.date.split('. ')[2] || post.date.split(' ')[0]}</td>
                 `;
                 tr.onclick = () => readPost(post.id);
-                tbody.appendChild(tr);
+                body.appendChild(tr);
             });
         }
 
-        // 4. 글 읽기 (상세 보기)
+        // 4. 글 읽기
         function readPost(id) {
             const post = posts.find(p => p.id === id);
             if (!post) return;
 
-            currentReadId = id;
+            currentPostId = id;
             document.getElementById('read-title').innerText = post.title;
-            document.getElementById('read-date').innerText = "작성일: " + post.date;
+            document.getElementById('read-date').innerText = `작성일: ${post.date}` + (post.lastEdit ? ` (수정됨: ${post.lastEdit})` : "");
             document.getElementById('read-content').innerHTML = post.content;
 
-            switchView('read');
+            switchSection('read');
         }
 
-        // 5. 글 삭제
+        // 5. 글 수정 모드로 전환
+        function editCurrentPost() {
+            const post = posts.find(p => p.id === currentPostId);
+            if (!post) return;
+
+            isEditMode = true;
+            document.getElementById('editor-title').value = post.title;
+            document.getElementById('editor-body').innerHTML = post.content;
+            document.getElementById('btn-save').innerText = "수정 완료";
+            
+            switchSection('editor');
+        }
+
+        // 6. 글 삭제
         function deleteCurrentPost() {
-            if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
-                posts = posts.filter(p => p.id !== currentReadId);
+            if (confirm("게시글을 영구적으로 삭제하시겠습니까?")) {
+                posts = posts.filter(p => p.id !== currentPostId);
                 showList();
             }
         }
 
-        // 6. 파일 업로드 (이미지 및 HTML 처리)
+        // 7. 파일 업로드 핵심 (HTML 렌더링 포함)
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
 
-            // HTML 파일인 경우
-            if (file.name.endsWith('.html')) {
+            if (file.name.toLowerCase().endsWith('.html')) {
+                // HTML 파일 읽기
                 reader.onload = function(e) {
-                    const content = e.target.result;
-                    // HTML을 시각적으로 구분하여 삽익 (에디터 내부에 코드 블록처럼 삽입)
-                    const htmlBox = `<div class="html-snippet" contenteditable="false"><strong>[첨부된 HTML 파일: ${file.name}]</strong><br><br>${escapeHtml(content)}</div><p><br></p>`;
-                    execCmd('insertHTML', htmlBox);
+                    const htmlCode = e.target.result;
+                    
+                    // 에디터 내부에 iframe 구조 생성하여 실제 렌더링
+                    const previewId = "frame-" + Date.now();
+                    const htmlContainer = `
+                        <div class="html-preview-container" contenteditable="false">
+                            <div class="html-preview-header">
+                                <span>HTML PREVIEW: ${file.name}</span>
+                                <span>Responsive View</span>
+                            </div>
+                            <iframe id="${previewId}" class="html-preview-frame"></iframe>
+                        </div>
+                        <p><br></p>
+                    `;
+                    
+                    execCmd('insertHTML', htmlContainer);
+                    
+                    // iframe 내부에 소스 넣기 (약간의 딜레이 필요)
+                    setTimeout(() => {
+                        const frame = document.getElementById(previewId);
+                        if (frame) {
+                            frame.contentWindow.document.open();
+                            frame.contentWindow.document.write(htmlCode);
+                            frame.contentWindow.document.close();
+                        }
+                    }, 100);
                 };
                 reader.readAsText(file);
-            } 
-            // 이미지 파일인 경우
-            else if (file.type.startsWith('image/')) {
+            } else if (file.type.startsWith('image/')) {
+                // 이미지 파일 처리
                 reader.onload = function(e) {
-                    const imgHtml = `<img src="${e.target.result}" alt="uploaded-image">`;
+                    const imgHtml = `<img src="${e.target.result}" style="max-width:100%; border-radius:15px; margin: 10px 0; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">`;
                     execCmd('insertHTML', imgHtml);
                 };
                 reader.readAsDataURL(file);
             }
-            
-            // 파일 입력 리셋
+
             event.target.value = "";
         }
 
-        // HTML 이스케이프 함수 (소스 코드를 안전하게 텍스트로 표시)
-        function escapeHtml(text) {
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-        }
-
-        // --- 에디터 코어 기능 ---
+        // 에디터 기본 기능
         function execCmd(command, value = null) {
             document.execCommand(command, false, value);
             document.getElementById('editor-body').focus();
         }
 
         function toggleTableModal() {
-            const modal = document.getElementById('tableModal');
+            const modal = document.getElementById('table-modal');
             const overlay = document.getElementById('overlay');
             const isVisible = modal.style.display === 'block';
             modal.style.display = isVisible ? 'none' : 'block';
             overlay.style.display = isVisible ? 'none' : 'block';
         }
 
-        function createTable() {
-            const rows = document.getElementById('rowInput').value;
-            const cols = document.getElementById('colInput').value;
-            let tableHtml = '<table>';
+        function insertTable() {
+            const rows = document.getElementById('row-count').value;
+            const cols = document.getElementById('col-count').value;
+            let table = '<table>';
             for (let i = 0; i < rows; i++) {
-                tableHtml += '<tr>';
-                for (let j = 0; j < cols; j++) {
-                    tableHtml += `<td>&nbsp;</td>`;
-                }
-                tableHtml += '</tr>';
+                table += '<tr>';
+                for (let j = 0; j < cols; j++) table += '<td>&nbsp;</td>';
+                table += '</tr>';
             }
-            tableHtml += '</table><p><br></p>';
-            execCmd('insertHTML', tableHtml);
+            table += '</table><p><br></p>';
+            execCmd('insertHTML', table);
             toggleTableModal();
         }
 
-        function showToast(msg) {
-            alert(msg); // 간단하게 alert로 처리 (커스텀 가능)
-        }
-
-        // 초기 실행
+        // 초기화
         showList();
     </script>
 </body>
