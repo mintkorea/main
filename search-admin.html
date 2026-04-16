@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>시설안내 관리자 도구</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f4f7f6; line-height: 1.6; }
+        .box { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #ddd; }
+        h2 { text-align: center; color: #1e3a5a; margin-top: 0; }
+        .item { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #1e3a5a; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>🏥 시설안내 파일 생성기</h2>
+    <div class="item">
+        <label>1. CSV 데이터 선택</label>
+        <input type="file" id="csv" multiple accept=".csv">
+    </div>
+    <div class="item">
+        <label>2. 관리자 비밀번호</label>
+        <input type="text" id="pw" value="1234">
+    </div>
+    <div class="item">
+        <label>3. 생성할 파일명</label>
+        <input type="text" id="fname" value="search">
+    </div>
+    <button onclick="make()">✨ 핸드폰 최적화 파일 생성</button>
+</div>
+
+<script>
+async function make() {
+    const files = document.getElementById('csv').files;
+    if (files.length === 0) return alert("CSV 파일을 선택해주세요.");
+    
+    let allData = [];
+    for (let f of files) {
+        const text = await f.arrayBuffer().then(b => {
+            let d = new TextDecoder('euc-kr').decode(b);
+            return d.includes('') ? new TextDecoder('utf-8').decode(b) : d;
+        });
+        text.split('\n').slice(1).forEach(r => {
+            const c = r.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            if(c[0]) allData.push({n:c[0], b:c[2], f:c[4], r:c[5], d:c[7], idx:parseInt(c[3])||999});
+        });
+    }
+
+    const currentPw = document.getElementById('pw').value;
+    const finalName = document.getElementById('fname').value;
+    const jsonStr = JSON.stringify(allData);
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>성의교정 시설안내</title>
+    <style>
+        :root { --primary: #1e3a5a; --bg: #f8f9fa; --accent: #ff4b4b; }
+        body { font-family: -apple-system, "Malgun Gothic", sans-serif; margin: 0; background: var(--bg); color: #333; -webkit-text-size-adjust: none; }
+        
+        /* 헤더: 고정(sticky) 제거 -> 스크롤하면 위로 올라가서 화면을 넓게 사용함 */
+        .header { background: white; padding: 20px 15px; border-bottom: 1px solid #eee; }
+        .header-inner { max-width: 800px; margin: 0 auto; }
+        .title { font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 15px; display: block; }
+        .search-box { width: 100%; padding: 15px; border: 2px solid #dee2e6; border-radius: 12px; font-size: 1.1rem; box-sizing: border-box; outline: none; margin-bottom: 15px; appearance: none; }
+        .search-box:focus { border-color: var(--primary); }
+        
+        /* 건물 필터 그리드 */
+        .filter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .f-btn { padding: 10px 2px; background: white; border: 1px solid #ddd; border-radius: 8px; font-size: 0.8rem; cursor: pointer; color: #555; font-weight: bold; }
+        .f-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        /* 결과 리스트 디자인 원복 */
+        .list-container { padding: 15px; max-width: 830px; margin: 0 auto; }
+        .card { background: white; padding: 16px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 6px solid #dee2e6; display: flex; flex-direction: column; }
+        .card-row { display: flex; align-items: center; line-height: 1.2; }
+        .badge { font-size: 0.65rem; color: #fff; padding: 4px 6px; border-radius: 4px; margin-right: 12px; min-width: 65px; text-align: center; font-weight: 800; }
+        .floor { font-weight: 900; color: #0061f2; font-size: 1.15rem; margin-right: 10px; min-width: 40px; }
+        .name { font-weight: 700; font-size: 1.05rem; color: #000; }
+        .room-no { color: var(--accent); font-weight: 800; font-size: 0.9rem; margin-left: 4px; }
+        .detail-info { margin-top: 8px; padding-left: 123px; font-size: 0.85rem; color: #666; font-weight: 500; border-top: 1px dashed #f0f0f0; padding-top: 8px; }
+        
+        /* 건물별 색상 */
+        .bg-omni { background: #339af0; } .bg-uasan { background: #51cf66; } .bg-sungui { background: #f06595; } .bg-main { background: #845ef7; } .bg-hospital { background: #fd7e14; }
+        #adminBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.05; border: none; background: none; font-size: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="header-inner">
+        <span class="title">성의교정 시설안내</span>
+        <input type="text" id="searchInput" class="search-box" placeholder="교수명, 부서, 호실 검색..." oninput="render()">
+        <div class="filter-grid">
+            <button class="f-btn active" onclick="setFilter('전체', this)">전체</button>
+            <button class="f-btn" onclick="setFilter('성의회관', this)">성의회관</button>
+            <button class="f-btn" onclick="setFilter('의산연', this)">의산연</button>
+            <button class="f-btn" onclick="setFilter('옴니버스', this)">옴니버스</button>
+            <button class="f-btn" onclick="setFilter('본관', this)">대학본관</button>
+            <button class="f-btn" onclick="setFilter('병원', this)">성모병원</button>
+            <button class="f-btn" onclick="location.reload()">새로고침</button>
+        </div>
+    </div>
+</div>
+<div class="list-container"><div id="list"></div></div>
+<button id="adminBtn" onclick="check()">[Admin]</button>
+
+<script>
+    const db = ` + jsonStr + `;
+    let currentFilter = "전체";
+    function setFilter(name, btn) {
+        document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); currentFilter = name; render();
+    }
+    function render() {
+        const v = document.getElementById('searchInput').value.toLowerCase();
+        let filtered = db.filter(i => {
+            let bMatch = (currentFilter === "전체") || (i.b.includes(currentFilter));
+            return bMatch && (i.n + (i.b||'') + (i.f||'') + (i.r||'') + (i.d||'')).toLowerCase().includes(v);
+        });
+        filtered.sort((a,b) => a.idx - b.idx || a.n.localeCompare(b.n));
+        document.getElementById('list').innerHTML = filtered.map(i => {
+            let bClass = i.b.includes('옴니')?'bg-omni':i.b.includes('의산연')?'bg-uasan':i.b.includes('성의회관')?'bg-sungui':i.b.includes('본관')?'bg-main':'bg-hospital';
+            return '<div class="card"><div class="card-row">' +
+                '<div class="badge ' + bClass + '">' + i.b.replace('옴니버스파크','옴니') + '</div>' +
+                '<span class="floor">' + i.f + (isNaN(i.f)?'':'F') + '</span>' +
+                '<span class="name">' + i.n + (i.r ? ' <span class="room-no">(' + i.r + '호)</span>' : '') + '</span></div>' +
+                (i.d ? '<div class="detail-info">└ ' + i.d + '</div>' : '') +
+            '</div>';
+        }).join('') || '<div style="text-align:center; padding:50px; color:#ccc;">결과가 없습니다.</div>';
+    }
+    function check() {
+        if(prompt('비밀번호?') === '` + currentPw + `') location.href = 'admin_tool.html';
+    }
+    render();
+<\/script>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], {type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = finalName + '.html';
+    a.click();
+}
+</script>
+</body>
+</html>
