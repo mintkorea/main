@@ -3,345 +3,439 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Docs - Pro Editor</title>
+    <title>Advanced WYSIWYG Workstation</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700&display=swap');
         
-        .editor-area { min-height: 450px; outline: none; background: white; padding: 2rem; }
-        .editor-area:empty:before { content: attr(placeholder); color: #cbd5e1; }
-        
-        /* 컴포넌트 래퍼 */
-        .comp-wrapper {
-            border: 2px solid #f1f5f9;
-            border-radius: 1rem;
-            margin: 1.5rem 0;
-            background: #fff;
-            position: relative;
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #f8fafc;
         }
-        .comp-header {
+
+        /* WYSIWYG Editor Styling */
+        .editor-content {
+            min-height: 700px;
+            background: white;
+            padding: 50px 60px;
+            outline: none;
+            line-height: 1.8;
+            font-size: 16px;
+            color: #334155;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        .editor-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: block;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .editor-content img.active-img {
+            outline: 3px solid #6366f1;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
+
+        /* File Attachment Styling */
+        .file-box {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            border: 1px dashed #cbd5e1;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin: 10px 0;
+            gap: 15px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        .file-box:hover { background: #e2e8f0; }
+
+        /* HTML Widget Box */
+        .widget-box {
+            border: 2px solid #f1f5f9;
+            border-radius: 12px;
+            margin: 25px 0;
+            overflow: hidden;
+            background: #fff;
+        }
+        .widget-toolbar {
             background: #f8fafc;
-            padding: 10px 16px;
+            padding: 8px 16px;
             border-bottom: 1px solid #f1f5f9;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            user-select: none;
-        }
-        .comp-preview {
-            width: 100%;
-            min-height: 250px;
-            border: none;
-            display: block;
         }
 
-        .view-section { display: none; }
-        .view-section.active { display: block; }
-
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
-        #toast {
-            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
-            background: #1e293b; color: white; padding: 0.8rem 2rem;
-            border-radius: 99px; font-weight: 600; z-index: 1000;
-            opacity: 0; transition: all 0.3s; pointer-events: none;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        /* Custom Toolbar Specifics */
+        .tool-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            color: #475569;
+            transition: all 0.2s;
         }
+        .tool-btn:hover { background: #f1f5f9; color: #6366f1; }
+        .tool-btn.active { background: #e0e7ff; color: #4338ca; }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <div id="toast">알림 메시지</div>
-
-    <div class="max-w-5xl mx-auto">
-        <!-- 상단 바 -->
-        <header class="flex justify-between items-center mb-12">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="goToList()">
-                <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black shadow-xl shadow-indigo-200 text-xl">S</div>
-                <div>
-                    <h1 class="text-xl font-black text-slate-900 leading-tight">SMART DOCS</h1>
-                    <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Management System</p>
-                </div>
-            </div>
-            <button id="btn-new-main" onclick="openNewEditor()" class="bg-indigo-600 text-white px-7 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"></path></svg>
-                새 문서 작성
+    <!-- Top Navbar -->
+    <header class="h-16 bg-white border-b px-6 flex items-center justify-between shadow-sm z-50">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-pen-nib text-indigo-600"></i>
+                <span>WYSIWYG Pro <span class="text-xs font-normal text-slate-400">v2.5</span></span>
+            </h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="exportDocument()" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 border rounded-lg hover:bg-slate-50">
+                <i class="fa-solid fa-file-export"></i> HTML 내보내기
             </button>
-        </header>
+            <button onclick="saveToLocal()" class="flex items-center gap-2 px-6 py-2 text-sm font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">
+                저장하기
+            </button>
+        </div>
+    </header>
 
-        <!-- [1] 목록 화면 -->
-        <section id="view-list" class="view-section active fade-in">
-            <div id="list-grid" class="grid md:grid-cols-2 gap-6">
-                <!-- 리스트 출력 영역 -->
-            </div>
-        </section>
-
-        <!-- [2] 편집/수정 화면 -->
-        <section id="view-write" class="view-section fade-in">
-            <div class="flex items-center justify-between mb-6">
-                <h2 id="write-view-title" class="text-2xl font-black text-slate-800">문서 작성하기</h2>
-                <button onclick="goToList()" class="text-slate-400 font-bold hover:text-slate-600">닫기</button>
-            </div>
-
-            <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-8 border-b border-slate-100">
-                    <input type="text" id="post-title" placeholder="제목을 입력하세요" class="w-full text-4xl font-black outline-none placeholder:text-slate-200 text-slate-800">
-                </div>
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Main Editor Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50 flex flex-col items-center py-10 px-4">
+            
+            <!-- Floating Toolbar -->
+            <div class="w-full max-w-4xl bg-white mb-6 p-2 rounded-xl shadow-md border flex flex-wrap items-center gap-1 sticky top-0 z-40">
+                <button onclick="format('bold')" class="tool-btn" title="굵게"><i class="fa-solid fa-bold"></i></button>
+                <button onclick="format('italic')" class="tool-btn" title="기울임"><i class="fa-solid fa-italic"></i></button>
+                <button onclick="format('underline')" class="tool-btn" title="밑줄"><i class="fa-solid fa-underline"></i></button>
+                <button onclick="format('strikeThrough')" class="tool-btn" title="취소선"><i class="fa-solid fa-strikethrough"></i></button>
                 
-                <div class="bg-slate-50/50 px-8 py-4 border-b border-slate-100 flex flex-wrap gap-4 items-center">
-                    <button onclick="document.getElementById('file-loader').click()" class="bg-white border-2 border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-bold hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-2 text-sm">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"></path></svg>
-                        HTML 컴포넌트(달력/표) 불러오기
-                    </button>
-                    <input type="file" id="file-loader" class="hidden" accept=".html" onchange="handleFileImport(event)">
+                <div class="h-6 w-px bg-slate-200 mx-1"></div>
+                
+                <!-- Font Size Custom -->
+                <div class="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg">
+                    <i class="fa-solid fa-text-height text-[10px] text-slate-400"></i>
+                    <input type="number" id="fontSizeInput" value="16" min="8" max="100" class="w-12 bg-transparent text-sm font-bold outline-none" onchange="applyFontSize()">
+                    <span class="text-[10px] text-slate-400 font-bold">PX</span>
                 </div>
 
-                <div id="main-editor" contenteditable="true" placeholder="이곳에 내용을 입력하거나 파일을 불러오세요..." class="editor-area prose prose-slate max-w-none"></div>
-            </div>
+                <div class="h-6 w-px bg-slate-200 mx-1"></div>
 
-            <div class="mt-8 flex justify-end gap-4 pb-20">
-                <button onclick="goToList()" class="px-8 py-3 text-slate-400 font-bold hover:text-slate-600 transition-colors">취소</button>
-                <button onclick="saveDocument()" class="bg-slate-900 text-white px-14 py-4 rounded-[1.5rem] font-bold hover:bg-black hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-200">
-                    저장하고 게시하기
-                </button>
-            </div>
-        </section>
-
-        <!-- [3] 상세 보기 화면 -->
-        <section id="view-detail" class="view-section fade-in">
-            <div class="bg-white rounded-[2.5rem] p-10 md:p-16 shadow-sm border border-slate-200">
-                <div class="mb-10">
-                    <div id="detail-date" class="text-indigo-500 font-bold text-xs tracking-widest mb-3">DATE</div>
-                    <h2 id="detail-title" class="text-5xl font-black text-slate-900 leading-tight"></h2>
-                </div>
-                
-                <div id="detail-content" class="prose prose-indigo max-w-none min-h-[300px] text-slate-700"></div>
-                
-                <div class="mt-20 pt-10 border-t border-slate-100 flex justify-between items-center">
-                    <button onclick="goToList()" class="flex items-center gap-2 text-slate-400 font-bold hover:text-slate-800 transition-colors">
-                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
-                        목록으로
-                    </button>
-                    <div class="flex gap-3">
-                        <button onclick="deleteDoc()" class="bg-red-50 text-red-500 px-6 py-3 rounded-2xl font-bold hover:bg-red-100 transition-colors">삭제</button>
-                        <button onclick="editDoc()" class="bg-indigo-600 text-white px-10 py-3 rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">수정하기</button>
+                <!-- Colors -->
+                <div class="flex items-center gap-2 ml-1">
+                    <div class="relative group flex items-center gap-1">
+                        <i class="fa-solid fa-font text-xs text-slate-400"></i>
+                        <input type="color" oninput="format('foreColor', this.value)" class="w-6 h-6 border-none bg-transparent cursor-pointer p-0" title="글자 색상">
+                    </div>
+                    <div class="relative group flex items-center gap-1">
+                        <i class="fa-solid fa-highlighter text-xs text-slate-400"></i>
+                        <input type="color" value="#ffff00" oninput="format('hiliteColor', this.value)" class="w-6 h-6 border-none bg-transparent cursor-pointer p-0" title="배경 형광펜">
                     </div>
                 </div>
+
+                <div class="h-6 w-px bg-slate-200 mx-1"></div>
+
+                <button onclick="format('justifyLeft')" class="tool-btn"><i class="fa-solid fa-align-left"></i></button>
+                <button onclick="format('justifyCenter')" class="tool-btn"><i class="fa-solid fa-align-center"></i></button>
+                <button onclick="format('justifyRight')" class="tool-btn"><i class="fa-solid fa-align-right"></i></button>
+                
+                <div class="h-6 w-px bg-slate-200 mx-1"></div>
+
+                <button onclick="format('insertUnorderedList')" class="tool-btn"><i class="fa-solid fa-list-ul"></i></button>
+                <button onclick="format('insertOrderedList')" class="tool-btn"><i class="fa-solid fa-list-ol"></i></button>
+                
+                <div class="h-6 w-px bg-slate-200 mx-1"></div>
+
+                <button onclick="format('removeFormat')" class="tool-btn text-red-400" title="서식 지우기"><i class="fa-solid fa-eraser"></i></button>
             </div>
-        </section>
+
+            <!-- Paper Surface -->
+            <div class="w-full max-w-4xl">
+                <input type="text" id="docTitle" placeholder="문서 제목 없음" class="w-full bg-transparent text-4xl font-bold mb-6 px-2 outline-none border-l-4 border-transparent focus:border-indigo-500 transition-all">
+                <div id="editor" class="editor-content" contenteditable="true" spellcheck="false">
+                    <p>이곳에 내용을 입력하거나 파일을 드래그하여 드롭하세요...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- HTML Source Editor Modal -->
+    <div id="htmlModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[100] p-6 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-4xl h-[80vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+                    <span class="font-bold text-slate-700">HTML 위젯 소스 코드 편집</span>
+                </div>
+                <button onclick="closeModal('htmlModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <textarea id="htmlCodeInput" class="flex-1 p-6 font-mono text-sm bg-[#1e1e1e] text-emerald-400 outline-none resize-none leading-relaxed" spellcheck="false"></textarea>
+            <div class="p-4 bg-white border-t flex justify-end gap-3">
+                <button onclick="closeModal('htmlModal')" class="px-6 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-lg">취소</button>
+                <button onclick="updateHtmlWidget()" class="px-8 py-2 font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md">변경사항 적용</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('smart_docs_pro_v3') || '[]');
-        let currentId = null; // 현재 작업 중인 문서 ID
+        const editor = document.getElementById('editor');
+        const fontSizeInput = document.getElementById('fontSizeInput');
+        let currentEditingWidget = null;
 
-        function notify(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg; t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 2000);
+        // --- Core Editor Functions ---
+        function format(cmd, val = null) {
+            document.execCommand(cmd, false, val);
+            editor.focus();
         }
 
-        function showView(viewId) {
-            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-            document.getElementById(`view-${viewId}`).classList.add('active');
-            document.getElementById('btn-new-main').style.display = (viewId === 'list') ? 'flex' : 'none';
-            window.scrollTo(0, 0);
+        function applyFontSize() {
+            const size = fontSizeInput.value;
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+
+            const range = selection.getRangeAt(0);
+            const span = document.createElement('span');
+            span.style.fontSize = size + 'px';
+            
+            if (range.toString().length > 0) {
+                span.textContent = range.toString();
+                range.deleteContents();
+                range.insertNode(span);
+            } else {
+                span.innerHTML = '&#8203;'; // Zero-width space
+                range.insertNode(span);
+                const newRange = document.createRange();
+                newRange.setStart(span, 1);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+            }
         }
 
-        function goToList() {
-            renderList();
-            showView('list');
-        }
+        // --- Drag & Drop for Images & Files & HTML ---
+        editor.addEventListener('dragover', e => e.preventDefault());
+        editor.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (!files.length) return;
 
-        function openNewEditor() {
-            currentId = null;
-            document.getElementById('write-view-title').innerText = "문서 작성하기";
-            document.getElementById('post-title').value = "";
-            document.getElementById('main-editor').innerHTML = "";
-            showView('write');
-        }
+            // 삽입 위치 조정
+            if (document.caretRangeFromPoint) {
+                const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
 
-        // HTML 파일 임포트 및 컴포넌트 생성
-        function handleFileImport(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            for (const file of files) {
+                const extension = file.name.split('.').pop().toLowerCase();
+                
+                if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {
+                    insertImage(file);
+                } else if (extension === 'html' || extension === 'htm') {
+                    insertHtmlWidget(file);
+                } else {
+                    insertFileBox(file);
+                }
+            }
+        });
 
+        function insertImage(file) {
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                const rawHtml = ev.target.result;
-                const encodedSource = btoa(unescape(encodeURIComponent(rawHtml)));
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'comp-wrapper';
-                wrapper.setAttribute('contenteditable', 'false');
-                wrapper.setAttribute('data-source', encodedSource);
-                wrapper.setAttribute('data-filename', file.name);
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.onclick = function() {
+                    document.querySelectorAll('.active-img').forEach(el => el.classList.remove('active-img'));
+                    this.classList.add('active-img');
+                };
+                insertAtCursor(img);
+            };
+            reader.readAsDataURL(file);
+        }
 
-                wrapper.innerHTML = `
-                    <div class="comp-header">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">FILE: ${file.name}</span>
-                        <button onclick="this.closest('.comp-wrapper').remove()" class="text-slate-300 hover:text-red-500 p-1">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
+        function insertFileBox(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const box = document.createElement('div');
+                box.className = 'file-box';
+                box.contentEditable = "false";
+                box.setAttribute('data-name', file.name);
+                box.setAttribute('data-content', e.target.result);
+                box.onclick = () => downloadData(e.target.result, file.name);
+                
+                box.innerHTML = `
+                    <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-file-arrow-down text-xl"></i>
                     </div>
-                    <iframe class="comp-preview" srcdoc="${rawHtml.replace(/"/g, '&quot;')}"></iframe>
+                    <div class="flex flex-col text-left">
+                        <span class="text-sm font-bold text-slate-700">${file.name}</span>
+                        <span class="text-[10px] text-slate-400 font-semibold uppercase">${file.size.toLocaleString()} bytes • 클릭하여 다운로드</span>
+                    </div>
                 `;
+                insertAtCursor(box);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function insertHtmlWidget(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                const widgetId = 'widget-' + Date.now();
+                const container = document.createElement('div');
+                container.id = widgetId;
+                container.className = 'widget-box';
+                container.contentEditable = "false";
                 
-                document.getElementById('main-editor').appendChild(wrapper);
-                document.getElementById('main-editor').appendChild(document.createElement('p')).innerHTML = "<br>";
+                container.innerHTML = `
+                    <div class="widget-toolbar">
+                        <span class="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                            <i class="fa-solid fa-code"></i> HTML WIDGET: ${file.name}
+                        </span>
+                        <div class="flex gap-3">
+                            <button onclick="openHtmlEditor('${widgetId}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">편집</button>
+                            <button onclick="document.getElementById('${widgetId}').remove()" class="text-xs font-bold text-red-400">삭제</button>
+                        </div>
+                    </div>
+                    <div class="widget-preview p-4">
+                        <iframe srcdoc="${content.replace(/"/g, '&quot;')}" class="w-full border-none pointer-events-none" style="min-height: 100px;"></iframe>
+                    </div>
+                    <script type="text/source" style="display:none;">${content}<\/script>
+                `;
+                insertAtCursor(container);
                 
-                const iframe = wrapper.querySelector('iframe');
-                iframe.onload = () => {
-                    setTimeout(() => {
-                        iframe.style.height = (iframe.contentWindow.document.body.scrollHeight + 30) + 'px';
-                    }, 500);
+                // Iframe Auto-height
+                const iframe = container.querySelector('iframe');
+                iframe.onload = function() {
+                    this.style.height = this.contentWindow.document.body.scrollHeight + 'px';
                 };
             };
             reader.readAsText(file);
-            e.target.value = "";
         }
 
-        // 저장 로직 (신규 & 수정 통합)
-        function saveDocument() {
-            const title = document.getElementById('post-title').value.trim();
-            if (!title) return notify("제목을 입력해 주세요.");
+        function insertAtCursor(node) {
+            const sel = window.getSelection();
+            if (sel.rangeCount) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(node);
+                
+                // 줄바꿈 추가
+                const br = document.createElement('p');
+                br.innerHTML = '<br>';
+                node.after(br);
+                
+                range.setStartAfter(br);
+                range.setEndAfter(br);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+            editor.focus();
+        }
 
-            const editor = document.getElementById('main-editor');
-            const clone = editor.cloneNode(true);
-            
-            // 컴포넌트는 소스코드만 남기고 저장용 플레이스홀더로 변환
-            clone.querySelectorAll('.comp-wrapper').forEach(w => {
-                const source = w.getAttribute('data-source');
-                const filename = w.getAttribute('data-filename');
-                const p = document.createElement('div');
-                p.className = 'saved-component';
-                p.setAttribute('data-source', source);
-                p.setAttribute('data-filename', filename);
-                w.parentNode.replaceChild(p, w);
-            });
+        // --- HTML Widget Editing ---
+        function openHtmlEditor(id) {
+            currentEditingWidget = document.getElementById(id);
+            const source = currentEditingWidget.querySelector('script[type="text/source"]').innerHTML;
+            document.getElementById('htmlCodeInput').value = source;
+            document.getElementById('htmlModal').style.display = 'flex';
+        }
 
-            const docData = {
-                id: currentId || Date.now(),
-                title: title,
-                content: clone.innerHTML,
-                date: new Date().toLocaleDateString('ko-KR', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
+        function updateHtmlWidget() {
+            if (!currentEditingWidget) return;
+            const newSource = document.getElementById('htmlCodeInput').value;
+            currentEditingWidget.querySelector('script[type="text/source"]').innerHTML = newSource;
+            const iframe = currentEditingWidget.querySelector('iframe');
+            iframe.srcdoc = newSource;
+            closeModal('htmlModal');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // --- Data Persistence ---
+        function saveToLocal() {
+            const data = {
+                title: document.getElementById('docTitle').value,
+                content: editor.innerHTML,
+                timestamp: new Date().toISOString()
             };
-
-            if (currentId) {
-                // 수정 모드
-                const idx = db.findIndex(item => item.id === currentId);
-                if (idx !== -1) db[idx] = docData;
-            } else {
-                // 신규 모드
-                db.push(docData);
-            }
-
-            localStorage.setItem('smart_docs_pro_v3', JSON.stringify(db));
-            notify(currentId ? "수정되었습니다." : "저장되었습니다.");
-            setTimeout(goToList, 500);
+            localStorage.setItem('wysiwyg_save', JSON.stringify(data));
+            
+            // 시각적 피드백
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> 저장됨';
+            btn.classList.replace('bg-indigo-600', 'bg-emerald-500');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('bg-emerald-500', 'bg-indigo-600');
+            }, 2000);
         }
 
-        function renderList() {
-            const grid = document.getElementById('list-grid');
-            if (db.length === 0) {
-                grid.innerHTML = `
-                    <div class="md:col-span-2 py-32 text-center border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-white">
-                        <p class="text-slate-300 font-bold text-lg">작성된 문서가 없습니다.</p>
-                    </div>
-                `;
-                return;
-            }
-            grid.innerHTML = db.slice().reverse().map(item => `
-                <div onclick="openDetail(${item.id})" class="bg-white p-10 rounded-[2.5rem] border border-slate-200 cursor-pointer hover:shadow-2xl hover:border-indigo-100 transition-all group relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <span class="text-[10px] font-black text-indigo-500 tracking-tighter uppercase">${item.date}</span>
-                    <h3 class="text-2xl font-black mt-3 text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-2">${item.title}</h3>
-                    <div class="mt-8 flex items-center gap-2 text-slate-400 font-bold text-xs">
-                        문서 열기
-                        <svg class="group-hover:translate-x-1 transition-transform" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M13 7l5 5-5 5M6 7l5 5-5 5"></path></svg>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function openDetail(id) {
-            const item = db.find(i => i.id === id);
-            if (!item) return;
-            currentId = id;
-            document.getElementById('detail-title').innerText = item.title;
-            document.getElementById('detail-date').innerText = item.date;
-            
-            const viewer = document.getElementById('detail-content');
-            viewer.innerHTML = item.content;
-            restoreComponents(viewer, false);
-            
-            showView('detail');
-        }
-
-        // 수정 모드로 진입하는 함수
-        function editDoc() {
-            const item = db.find(i => i.id === currentId);
-            if (!item) return;
-
-            document.getElementById('write-view-title').innerText = "문서 수정하기";
-            document.getElementById('post-title').value = item.title;
-            
-            const editor = document.getElementById('main-editor');
-            editor.innerHTML = item.content;
-            
-            // 플레이스홀더를 다시 iframe으로 변환
-            restoreComponents(editor, true);
-            
-            showView('write');
-        }
-
-        // 저장된 컴포넌트 데이터를 다시 실행 가능한 iframe으로 변환
-        function restoreComponents(container, isEditable) {
-            container.querySelectorAll('.saved-component').forEach(placeholder => {
-                const sourceEncoded = placeholder.getAttribute('data-source');
-                const filename = placeholder.getAttribute('data-filename');
-                const rawHtml = decodeURIComponent(escape(atob(sourceEncoded)));
-
-                const wrapper = document.createElement('div');
-                wrapper.className = 'comp-wrapper';
-                wrapper.setAttribute('contenteditable', 'false');
-                wrapper.setAttribute('data-source', sourceEncoded);
-                wrapper.setAttribute('data-filename', filename);
-
-                wrapper.innerHTML = `
-                    <div class="comp-header">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">FILE: ${filename}</span>
-                        ${isEditable ? `
-                        <button onclick="this.closest('.comp-wrapper').remove()" class="text-slate-300 hover:text-red-500 p-1">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>` : ''}
-                    </div>
-                    <iframe class="comp-preview" srcdoc="${rawHtml.replace(/"/g, '&quot;')}"></iframe>
-                `;
+        window.onload = () => {
+            const saved = localStorage.getItem('wysiwyg_save');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                document.getElementById('docTitle').value = parsed.title || '';
+                editor.innerHTML = parsed.content || '<p><br></p>';
                 
-                placeholder.parentNode.replaceChild(wrapper, placeholder);
-                
-                const iframe = wrapper.querySelector('iframe');
-                iframe.onload = () => {
-                    setTimeout(() => {
-                        iframe.style.height = (iframe.contentWindow.document.body.scrollHeight + 30) + 'px';
-                    }, 500);
-                };
-            });
+                // 위젯들 iframe 복구
+                editor.querySelectorAll('.widget-box').forEach(w => {
+                    const src = w.querySelector('script[type="text/source"]').innerHTML;
+                    w.querySelector('iframe').srcdoc = src;
+                });
+            }
+        };
+
+        // --- Export ---
+        function downloadData(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename;
+            link.click();
         }
 
-        function deleteDoc() {
-            if (!confirm("이 문서를 삭제할까요? 복구할 수 없습니다.")) return;
-            db = db.filter(item => item.id !== currentId);
-            localStorage.setItem('smart_docs_pro_v3', JSON.stringify(db));
-            goToList();
-            notify("삭제되었습니다.");
+        function exportDocument() {
+            const title = document.getElementById('docTitle').value || 'Untitled-Document';
+            const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 50px auto; line-height: 1.8; color: #333; }
+        img { max-width: 100%; height: auto; border-radius: 8px; }
+        .file-box { border: 1px solid #ddd; padding: 15px; border-radius: 10px; background: #f9f9f9; display: inline-flex; align-items: center; gap: 10px; }
+        .widget-box { border: 1px solid #eee; margin: 20px 0; border-radius: 8px; overflow: hidden; }
+        .widget-toolbar { background: #f5f5f5; padding: 5px 15px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>${title}</h1>
+    <hr>
+    <div>${editor.innerHTML}</div>
+</body>
+</html>`;
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            downloadData(url, title + '.html');
         }
-
-        // 초기 실행
-        renderList();
     </script>
 </body>
 </html>
