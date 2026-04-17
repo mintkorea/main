@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -30,7 +29,7 @@
             display: flex;
             flex-direction: column;
             background: white;
-            position: relative; /* 자식 요소 배치의 기준 */
+            position: relative;
         }
 
         .detail-view .calendar-cell { aspect-ratio: 1 / 1.35; }
@@ -42,7 +41,7 @@
             justify-content: center;
             font-weight: 700;
             position: relative;
-            z-index: 10; /* 글자가 테두리 밑으로 가지 않게 설정 */
+            z-index: 10;
         }
 
         .shift-area {
@@ -55,17 +54,15 @@
             z-index: 10;
         }
 
-        /* [핵심 수정] 오늘 날짜 하이라이트: 가상 요소를 사용한 최상단 테두리 */
         .is-selected-day::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            border: 4px solid #ef4444; /* 아주 진한 빨간색 테두리 */
-            z-index: 20; /* 내부 배경색보다 무조건 위에 위치 */
-            pointer-events: none; /* 터치 방해 금지 */
+            border: 4px solid #ef4444;
+            z-index: 20;
+            pointer-events: none;
         }
         
-        /* TODAY 라벨 위치 조정 */
         .is-selected-day::after {
             content: "TODAY";
             position: absolute;
@@ -81,7 +78,6 @@
         .sunday { color: #ef4444; }
         .saturday { color: #3b82f6; }
 
-        /* 조 선택 시 투톤 효과 (숫자 영역을 맑게 처리) */
         .cell-highlighted .date-area {
             background-color: rgba(255, 255, 255, 0.45) !important;
             color: #ffffff !important;
@@ -168,12 +164,13 @@
     </div>
 
     <script>
+        // 수정된 설정: A조(황색), B조(적색), C조(청색)
         let config = JSON.parse(localStorage.getItem('shift_config_v2')) || {
             appTitle: '근무달력', appIcon: '🎯', baseDate: '2026-03-01', adminPassword: '0000',
             pattern: [
-                { name: 'A', color: '#fee2e2', highlight: '#ef4444' },
-                { name: 'B', color: '#fef3c7', highlight: '#f59e0b' },
-                { name: 'C', color: '#dbeafe', highlight: '#3b82f6' }
+                { name: 'A', color: '#fef3c7', highlight: '#f59e0b' }, // A조: 황색
+                { name: 'B', color: '#fee2e2', highlight: '#ef4444' }, // B조: 적색
+                { name: 'C', color: '#dbeafe', highlight: '#3b82f6' }  // C조: 청색
             ]
         };
 
