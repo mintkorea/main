@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>연차 관리 시스템 (입력 튕김 해결본)</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; }
+        .wrapper { display: flex; height: 100vh; overflow: hidden; }
+        
+        .left-frame {
+            width: 400px; background: #2c3e50; padding: 12px;
+            display: flex; flex-direction: column; border-right: 3px solid #000; overflow-y: auto;
+        }
+        
+        .menu-container { background: #34495e; padding: 10px; border-radius: 4px; margin-bottom: 12px; border: 1px solid #1a252f; }
+        .menu-row { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
+        
+        .btn { padding: 6px 10px; cursor: pointer; border: 1px solid #000; font-weight: bold; font-size: 12px; border-radius: 2px; flex: 1; text-align: center; }
+        .btn-blue { background: #3498db; color: white; }
+        .btn-orange { background: #e67e22; color: white; }
+        .btn-green { background: #2ecc71; color: white; }
+        .btn-white { background: #ffffff; color: black; }
+        .btn-print { background: #95a5a6; color: white; }
+        
+        table { background: white; border-collapse: collapse; width: 100%; border: 2px solid #000; }
+        th, td { border: 1.1px solid #000 !important; text-align: center; font-size: 11px; font-weight: bold; height: 22px; color: #000; padding: 0; }
+        #inputTable { table-layout: fixed; }
+        .name-td { background-color: #e3f2fd !important; }
+        .v-input { background-color: #fff3e0 !important; width: 92%; border: 1px solid #ffcc80; text-align: center; font-weight: bold; }
+        .hdr { background: #dee2e6 !important; height: 28px; font-size: 12px; }
+
+        .right-frame { flex: 1; background: #7f8c8d; padding: 5px; overflow: auto; display: flex; justify-content: center; }
+        #paper { background: white; padding: 15mm 10mm; width: 297mm; box-shadow: 0 0 20px rgba(0,0,0,0.5); box-sizing: border-box; }
+        #outputTable { table-layout: fixed; width: 100%; border-collapse: collapse; }
+
+        .sat { background-color: #e7f5ff !important; color: blue !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .sun { background-color: #fff5f5 !important; color: red !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .v-mark { background-color: #90ee90 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .thick-border { border-bottom: 2.5px solid #000 !important; }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .left-frame { display: none !important; }
+            .right-frame { padding: 0; background: white; width: 100%; }
+            #paper { box-shadow: none; width: 100%; padding: 0; margin: 0; border: none; }
+            @page { size: A4 landscape; margin: 10mm; }
+            #outputTable td { height: 19.5px !important; font-size: 9.5pt !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="left-frame">
+        <div class="menu-container">
+            <div class="menu-row">
+                <button class="btn btn-orange" onclick="toggleView('ledger')">연차대장</button>
+                <button class="btn btn-blue" onclick="toggleView('schedule')">연차달력</button>
+                <button class="btn btn-print" onclick="window.print()">인쇄</button>
+                <label style="color:white; font-size:11px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center;">
+                    <input type="checkbox" id="allowEdit" onchange="render()"> 명단수정
+                </label>
+            </div>
+            <div class="menu-row">
+                <button class="btn btn-green" onclick="downloadFile()">파일저장</button>
+                <button class="btn btn-white" onclick="document.getElementById('fileInput').click()">파일열기</button>
+                <input type="file" id="fileInput" style="display:none" onchange="uploadFile(event)">
+            </div>
+            <div class="menu-row">
+                <input type="month" id="targetMonth" value="2026-05" onchange="render()" style="padding:4px; font-weight:bold; width:100%; text-align:center;">
+            </div>
+        </div>
+
+        <table id="inputTable">
+            <thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td>성명</td><td>연차</td></tr></thead>
+            <tbody id="inputBody"></tbody>
+        </table>
+    </div>
+
+    <div class="right-frame">
+        <div id="paper">
+            <h2 id="mainTitle" style="text-align:center; margin-top:0;"></h2>
+            <table id="outputTable"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentView = 'schedule';
+    let staffData = [
+        { g: "성의교정", s: "관리", p: "소장", n: "이규용" },
+        { g: "성의교정", s: "관리", p: "부소장", n: "박상현" },
+        { g: "성의회관", s: "관리", p: "반장", n: "유정수" },
+        { g: "성의회관", s: "A조", p: "조장", n: "배준용" },
+        { g: "성의회관", s: "A조", p: "조원", n: "김영중" },
+        { g: "성의회관", s: "A조", p: "조원", n: "이명구" },
+        { g: "성의회관", s: "A조", p: "조원", n: "김삼동" },
+        { g: "성의회관", s: "B조", p: "조장", n: "심규천" },
+        { g: "성의회관", s: "B조", p: "조원", n: "권영국" },
+        { g: "성의회관", s: "B조", p: "조원", n: "임종헌" },
+        { g: "성의회관", s: "B조", p: "조원", n: "전준수" },
+        { g: "성의회관", s: "C조", p: "조장", n: "황재업" },
+        { g: "성의회관", s: "C조", p: "조원", n: "김태언" },
+        { g: "성의회관", s: "C조", p: "조원", n: "이태원" },
+        { g: "성의회관", s: "C조", p: "조원", n: "이정석" },
+        { g: "옴니버스", s: "관리", p: "반장", n: "오재준" },
+        { g: "옴니버스", s: "A조", p: "조장", n: "손병휘" },
+        { g: "옴니버스", s: "A조", p: "조원", n: "김전식" },
+        { g: "옴니버스", s: "A조", p: "조원", n: "권순호" },
+        { g: "옴니버스", s: "B조", p: "조장", n: "황일범" },
+        { g: "옴니버스", s: "B조", p: "조원", n: "이상길" },
+        { g: "옴니버스", s: "B조", p: "조원", n: "허용" },
+        { g: "옴니버스", s: "C조", p: "조장", n: "피재영" },
+        { g: "옴니버스", s: "C조", p: "조원", n: "남형민" },
+        { g: "옴니버스", s: "C조", p: "조원", n: "강경훈" },
+        { g: "기숙사", s: "관리", p: "반장", n: "이강택" },
+        { g: "기숙사", s: "관리", p: "조원", n: "유시균" },
+        { g: "기숙사", s: "관리", p: "조원", n: "이상현" }
+    ];
+
+    let vData = JSON.parse(localStorage.getItem('v_data_v34')) || {};
+
+    function toggleView(view) { currentView = view; render(); }
+
+    function render() {
+        const [y, m] = document.getElementById('targetMonth').value.split('-').map(Number);
+        const mKey = `${y}-${String(m).padStart(2,'0')}`;
+        const canEdit = document.getElementById('allowEdit').checked;
+        if (currentView === 'schedule') renderSchedule(y, m, mKey);
+        else renderLedger(y);
+        renderInput(mKey, canEdit);
+    }
+
+    function renderInput(mKey, canEdit) {
+        let inH = "";
+        staffData.forEach((staff, idx) => {
+            const curV = vData[mKey]?.[staff.n] || "";
+            const isLast = (idx === staffData.length - 1) || (staffData[idx+1].s !== staff.s || staffData[idx+1].g !== staff.g);
+            inH += `<tr class="${isLast ? 'thick-border' : ''}">`;
+            if(idx===0 || staffData[idx-1].g !== staff.g) {
+                inH += `<td rowspan="${staffData.filter(x=>x.g===staff.g).length}">${staff.g}</td>`;
+            }
+            if(idx===0 || staffData[idx-1].s !== staff.s || staffData[idx-1].g !== staff.g) {
+                let span = staffData.filter(x=>x.g===staff.g && x.s===staff.s).length;
+                inH += `<td rowspan="${span}">${canEdit ? `<input style="width:90%; font-size:10px; text-align:center;" value="${staff.s}" onchange="staffData[${idx}].s=this.value; render();">` : staff.s}</td>`;
+            }
+            inH += `<td>${staff.p}</td><td class="name-td">${canEdit ? `<input style="width:90%; font-size:10px; text-align:center; background:transparent; border:none;" value="${staff.n}" onchange="staffData[${idx}].n=this.value; render();">` : staff.n}</td>`;
+            // [수정] onblur와 onkeydown을 사용하여 입력 도중 튕김 방지
+            inH += `<td><input type="text" class="v-input" value="${curV}" onblur="updateV('${staff.n}', this.value)" onkeydown="if(event.keyCode==13) this.blur();"></td></tr>`;
+        });
+        document.getElementById('inputBody').innerHTML = inH;
+    }
+
+    function renderSchedule(y, m, mKey) {
+        const lastDay = new Date(y, m, 0).getDate();
+        document.getElementById('mainTitle').innerHTML = `<b>${y}년 ${m}월 연차 일정표 (성의교정 보안팀)</b>`;
+        
+        let outH = `<thead><tr class="hdr"><td style="width:60px">구분</td><td style="width:40px">조</td><td style="width:50px">직위</td><td style="width:70px">성명</td>`;
+        for(let i=1; i<=lastDay; i++) {
+            const d = new Date(y, m-1, i);
+            const we = d.getDay()===0 ? 'sun' : (d.getDay()===6 ? 'sat' : '');
+            outH += `<td class="${we}">${i}</td>`;
+        }
+        outH += `</tr></thead><tbody>`;
+
+        staffData.forEach((staff, idx) => {
+            const curV = vData[mKey]?.[staff.n] || "";
+            const vArr = curV.split(',').map(s => s.trim());
+            const isLast = (idx === staffData.length - 1) || (staffData[idx+1].s !== staff.s || staffData[idx+1].g !== staff.g);
+            outH += `<tr class="${isLast?'thick-border':''}">`;
+            if(idx===0 || staffData[idx-1].g !== staff.g) outH += `<td rowspan="${staffData.filter(x=>x.g===staff.g).length}">${staff.g}</td>`;
+            if(idx===0 || staffData[idx-1].s !== staff.s || staffData[idx-1].g !== staff.g) outH += `<td rowspan="${staffData.filter(x=>x.g===staff.g && x.s===staff.s).length}">${staff.s}</td>`;
+            outH += `<td>${staff.p}</td><td>${staff.n}</td>`;
+            for(let i=1; i<=lastDay; i++) {
+                const d = new Date(y, m-1, i);
+                const we = d.getDay()===0 ? 'sun' : (d.getDay()===6 ? 'sat' : '');
+                const isV = vArr.includes(String(i));
+                outH += `<td class="${we} ${isV?'v-mark':''}">${isV?'V':''}</td>`;
+            }
+            outH += `</tr>`;
+        });
+        document.getElementById('outputTable').innerHTML = outH + `</tbody>`;
+    }
+
+    function renderLedger(y) {
+        document.getElementById('mainTitle').innerHTML = `<b>${y}년 연차 관리대장 (성의교정 보안팀)</b>`;
+        let outH = `<thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td>성명</td>`;
+        for(let i=1; i<=12; i++) outH += `<td>${i}월</td>`;
+        outH += `<td>합계</td></tr></thead><tbody>`;
+        staffData.forEach((staff, idx) => {
+            const isLast = (idx === staffData.length - 1) || (staffData[idx+1].s !== staff.s || staffData[idx+1].g !== staff.g);
+            outH += `<tr class="${isLast?'thick-border':''}">`;
+            if(idx===0 || staffData[idx-1].g !== staff.g) outH += `<td rowspan="${staffData.filter(x=>x.g===staff.g).length}">${staff.g}</td>`;
+            if(idx===0 || staffData[idx-1].s !== staff.s || staffData[idx-1].g !== staff.g) outH += `<td rowspan="${staffData.filter(x=>x.g===staff.g && x.s===staff.s).length}">${staff.s}</td>`;
+            outH += `<td>${staff.p}</td><td>${staff.n}</td>`;
+            let total = 0;
+            for(let m=1; m<=12; m++) {
+                const mk = `${y}-${String(m).padStart(2,'0')}`;
+                const val = vData[mk]?.[staff.n] || "";
+                total += (val && val.trim() !== "") ? val.split(',').length : 0;
+                outH += `<td>${val}</td>`;
+            }
+            outH += `<td style="color:blue;">${total}</td></tr>`;
+        });
+        document.getElementById('outputTable').innerHTML = outH + `</tbody>`;
+    }
+
+    function updateV(name, val) {
+        const mKey = document.getElementById('targetMonth').value;
+        if(!vData[mKey]) vData[mKey] = {};
+        // 값이 실제로 바뀌었을 때만 렌더링하여 효율성 높임
+        if (vData[mKey][name] !== val) {
+            vData[mKey][name] = val;
+            render();
+            localStorage.setItem('v_data_v34', JSON.stringify(vData));
+        }
+    }
+
+    function downloadFile() {
+        const dataStr = JSON.stringify({ staff: staffData, v: vData }, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `연차데이터_${document.getElementById('targetMonth').value}.json`;
+        a.click();
+    }
+
+    function uploadFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imported = JSON.parse(e.target.result);
+            if (imported.staff && imported.v) {
+                staffData = imported.staff; vData = imported.v;
+                localStorage.setItem('v_data_v34', JSON.stringify(vData));
+                render(); alert("데이터를 성공적으로 불러왔습니다!");
+            }
+        };
+        reader.readAsText(file);
+    }
+    window.onload = () => render();
+</script>
+</body>
+</html>
