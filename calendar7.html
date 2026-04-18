@@ -50,10 +50,10 @@
     <div id="commonModal" class="modal-overlay" onclick="closeModal()">
         <div class="bg-white rounded-3xl w-[90%] max-w-sm overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
             <div id="modalHeader" class="p-4 border-b font-black text-center text-lg"></div>
-            <div id="modalBody" class="p-6 space-y-4 font-bold"></div>
+            <div id="modalBody" class="p-6 space-y-4 font-bold text-center"></div>
             <div id="modalFooter" class="flex border-t">
                 <button onclick="closeModal()" class="flex-1 p-4 bg-slate-100 text-slate-600 font-bold">닫기</button>
-                <button id="modalConfirmBtn" class="flex-1 p-4 bg-blue-600 text-white font-bold hidden">확인</button>
+                <button id="modalConfirmBtn" class="flex-1 p-4 bg-blue-600 text-white font-bold hidden">저장</button>
             </div>
         </div>
     </div>
@@ -69,6 +69,9 @@
         const today = new Date(); today.setHours(0,0,0,0);
         let currentYear = today.getFullYear(), currentMonth = today.getMonth();
 
+        // [중요] 연차 모달에서 소속을 함께 보여주기 위해 스태프 정보 로드
+        let staffInfo = []; 
+
         function init() {
             document.getElementById('appTitle').textContent = settings.title;
             const select = document.getElementById('shiftSelect');
@@ -78,6 +81,11 @@
                 opt.value = name; opt.textContent = `${name}조 강조`;
                 select.appendChild(opt);
             });
+
+            // 로컬스토리지에서 스태프 명단 정보 가져오기 시도 (vocation.html에서 저장한 staff 데이터 활용)
+            const rawV = localStorage.getItem('v_data_v34_full'); // vocation.html에서 staff 포함 전체 저장 필요
+            if(rawV) staffInfo = JSON.parse(rawV).staff || [];
+
             render();
         }
 
@@ -101,11 +109,19 @@
                 const shiftIdx = ((diff % 3) + 3) % 3;
                 const shiftName = ['C', 'A', 'B'][shiftIdx];
                 const shiftColor = settings.colors[shiftName];
-                let vNames = [];
+                
+                let vList = []; // [소속 조 이름] 형태 저장용
                 const monthV = vData[mKey] || {};
+                
+                // 연차자 정보 구성 (성의회관 A조 김영중 형태)
                 for (let name in monthV) {
                     const daysArr = monthV[name].split(',').map(v => v.trim());
-                    if (daysArr.includes(String(d))) vNames.push(name);
+                    if (daysArr.includes(String(d))) {
+                        // staffInfo에서 소속(g)과 조(s) 찾기
+                        const info = staffInfo.find(s => s.n === name);
+                        if(info) vList.push(`${info.g} ${info.s} ${name}`);
+                        else vList.push(name); // 정보 없으면 이름만
+                    }
                 }
 
                 const cell = document.createElement('div');
@@ -121,55 +137,12 @@
                 if (targetShift !== shiftName) sDiv.style.backgroundColor = shiftColor[0];
                 sDiv.textContent = shiftName;
 
-                if (vNames.length > 0) {
+                if (vList.length > 0) {
                     const dot = document.createElement('div');
                     dot.className = 'v-dot';
                     sDiv.appendChild(dot);
-                    cell.onclick = () => showVNames(`${currentMonth+1}월 ${d}일 연차자`, vNames);
+                    cell.onclick = () => showVNames(`${currentMonth+1}월 ${d}일 연차자`, vList);
                 }
                 cell.append(dDiv, sDiv);
                 container.appendChild(cell);
             }
-        }
-
-        function openAuthModal() {
-            const h = document.getElementById('modalHeader'), b = document.getElementById('modalBody'), f = document.getElementById('modalConfirmBtn');
-            h.textContent = "⚙️ 설정 인증"; b.innerHTML = `<input type="password" id="pwIn" class="w-full p-4 bg-slate-100 rounded-2xl text-center text-2xl outline-none" placeholder="비밀번호">`;
-            f.classList.remove('hidden'); f.onclick = () => {
-                if(document.getElementById('pwIn').value === settings.adminPw) openSettings();
-                else alert('비밀번호가 틀립니다.');
-            };
-            document.getElementById('commonModal').classList.add('active');
-        }
-
-        function openSettings() {
-            const h = document.getElementById('modalHeader'), b = document.getElementById('modalBody'), f = document.getElementById('modalConfirmBtn');
-            h.textContent = "시스템 설정";
-            b.innerHTML = `
-                <div class="space-y-3 text-left">
-                    <div><label class="text-xs">앱 타이틀</label><input id="set_title" class="w-full p-2 border rounded" value="${settings.title}"></div>
-                    <div><label class="text-xs">기준일(C조)</label><input type="date" id="set_date" class="w-full p-2 border rounded" value="${settings.baseDate}"></div>
-                    <div><label class="text-xs">비밀번호 변경</label><input type="password" id="set_pw" class="w-full p-2 border rounded" value="${settings.adminPw}"></div>
-                </div>`;
-            f.onclick = () => {
-                settings.title = document.getElementById('set_title').value;
-                settings.baseDate = document.getElementById('set_date').value;
-                settings.adminPw = document.getElementById('set_pw').value;
-                localStorage.setItem('cal_settings', JSON.stringify(settings));
-                location.reload();
-            };
-        }
-
-        function showVNames(title, names) {
-            const h = document.getElementById('modalHeader'), b = document.getElementById('modalBody'), f = document.getElementById('modalConfirmBtn');
-            h.textContent = title; b.innerHTML = names.map(n => `<div class="p-2 bg-purple-50 rounded mb-1">${n}</div>`).join('');
-            f.classList.add('hidden');
-            document.getElementById('commonModal').classList.add('active');
-        }
-
-        function closeModal() { document.getElementById('commonModal').classList.remove('active'); }
-        function changeMonth(v) { currentMonth += v; if(currentMonth<0){currentMonth=11;currentYear--;} else if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
-        window.onload = init;
-    </script>
-</body>
-</html>
