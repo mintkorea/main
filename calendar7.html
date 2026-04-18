@@ -10,7 +10,7 @@
         
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
-        /* 달력 그리드 */
+        /* 달력 그리드 구조 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; }
         .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; background: white; position: relative; aspect-ratio: 1 / 1.35; cursor: pointer; }
 
@@ -27,20 +27,26 @@
             font-weight: 900; font-size: 18px; position: relative; z-index: 10; 
         }
 
-        /* 하이라이트 투톤 적용 */
-        .cell-highlighted .date-area { background-color: rgba(255, 255, 255, 0.3) !important; color: #fff !important; }
-        .cell-highlighted .shift-area { color: #fff !important; }
+        /* [요청] 강조 시 투톤 글자색 변경 */
+        .cell-highlighted .date-area { background-color: rgba(255, 255, 255, 0.2) !important; color: #ffffff !important; }
+        .cell-highlighted .shift-area { color: #ffffff !important; }
 
-        /* 연차 보라색 원 */
+        /* [요청] 오늘 하이라이트 Today 표시 */
+        .is-today { border: 3.5px solid #ef4444 !important; z-index: 30; }
+        .is-today::after {
+            content: 'TODAY'; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+            background: #ef4444; color: white; font-size: 8px; font-weight: 900; padding: 1px 4px; border-radius: 0 0 4px 4px; z-index: 31;
+        }
+
+        /* [요청] 연차 표시 보라색 원 */
         .v-mark { position: absolute; width: 30px; height: 30px; background-color: #f3e8ff; border: 1px solid #d8b4fe; border-radius: 50%; z-index: -1; }
 
         .sunday { color: #ef4444; }
         .saturday { color: #3b82f6; }
-        .is-today::before { content: ''; position: absolute; inset: 0; border: 4px solid #ef4444; z-index: 20; pointer-events: none; }
 
-        /* 모달 스타일 */
+        /* 모달 시스템 */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
-        .modal-overlay.active { display: flex; } /* active 클래스 추가 시 보임 */
+        .modal-overlay.active { display: flex; }
         
         .nav-btn { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background-color: #f1f5f9; color: #475569; font-weight: 800; }
     </style>
@@ -54,7 +60,7 @@
                     <span class="text-xl">📅</span>
                     <h1 class="text-xl font-black text-slate-800">성의교정 근무달력</h1>
                 </div>
-                <button onclick="openConfig()" class="text-[11px] font-extrabold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">⚙️ 설정</button>
+                <button onclick="openConfigModal()" class="text-[11px] font-extrabold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">⚙️ 설정</button>
             </div>
             
             <div class="flex items-center justify-between mb-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
@@ -64,7 +70,7 @@
 
             <div class="flex items-center justify-between bg-white p-1 rounded-xl border border-gray-100">
                 <button onclick="changeMonth(-1)" class="nav-btn">＜</button>
-                <h2 id="monthTitle" class="text-[17px] font-black"></h2>
+                <h2 id="monthTitle" class="text-[17px] font-black text-slate-800"></h2>
                 <button onclick="changeMonth(1)" class="nav-btn">＞</button>
             </div>
         </header>
@@ -80,15 +86,18 @@
     <div id="commonModal" class="modal-overlay" onclick="closeModal()">
         <div class="bg-white rounded-3xl w-72 overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
             <div id="modalHeader" class="p-4 border-b font-black text-center text-lg"></div>
-            <div id="modalBody" class="p-5 space-y-2 font-bold text-center"></div>
-            <button onclick="closeModal()" class="w-full p-4 bg-slate-800 text-white font-bold">닫기</button>
+            <div id="modalBody" class="p-5 space-y-3 font-bold text-center"></div>
+            <div id="modalFooter" class="flex border-t">
+                <button onclick="closeModal()" class="flex-1 p-4 bg-slate-100 text-slate-600 font-bold">닫기</button>
+                <button id="modalConfirmBtn" class="flex-1 p-4 bg-slate-800 text-white font-bold hidden">확인</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // 기본 설정 및 데이터 연동
         const config = {
             baseDate: '2025-01-01',
+            adminPassword: '0000',
             pattern: [
                 { name: 'C', color: '#dbeafe', highlight: '#3b82f6' },
                 { name: 'A', color: '#fef3c7', highlight: '#f59e0b' },
@@ -96,7 +105,8 @@
             ]
         };
 
-        let currentYear = 2026, currentMonth = 3; // 4월 기준
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
         const today = new Date(); today.setHours(0,0,0,0);
 
         function init() {
@@ -112,7 +122,7 @@
         }
 
         function render() {
-            // 연차 관리 대장(vocation.html)의 데이터 읽기
+            // [해결] vocation.html의 연차 데이터 읽기 (v_data_v34)
             const vData = JSON.parse(localStorage.getItem('v_data_v34')) || {};
             const mKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
             
@@ -134,15 +144,18 @@
                 const diff = Math.floor((curr - base) / 86400000);
                 const shift = config.pattern[((diff % 3) + 3) % 3];
 
-                // 연차자 체크
+                // [해결] 연차 날짜 매칭 로직 (쉼표 구분 대응)
                 let vNames = [];
                 const monthV = vData[mKey] || {};
                 for (let name in monthV) {
-                    if (monthV[name].split(',').map(v=>v.trim()).includes(String(d))) vNames.push(name);
+                    const daysArr = monthV[name].split(',').map(v => v.trim());
+                    if (daysArr.includes(String(d))) vNames.push(name);
                 }
 
                 const cell = document.createElement('div');
                 cell.className = 'calendar-cell';
+                
+                // [해결] 오늘 날짜 하이라이트 Today
                 if (curr.getTime() === today.getTime()) cell.classList.add('is-today');
 
                 const isHighlighted = (targetShift === shift.name);
@@ -153,6 +166,8 @@
 
                 const dDiv = document.createElement('div');
                 dDiv.className = `date-area ${curr.getDay()===0?'sunday':curr.getDay()===6?'saturday':''}`;
+                
+                // [해결] 연차 보라색 원 표시
                 if (vNames.length > 0) {
                     const mark = document.createElement('div');
                     mark.className = 'v-mark';
@@ -166,7 +181,7 @@
                 sDiv.textContent = shift.name;
 
                 cell.onclick = () => {
-                    if (vNames.length > 0) showModal(`${currentMonth+1}월 ${d}일 연차자`, vNames);
+                    if (vNames.length > 0) showVocationModal(`${currentMonth+1}월 ${d}일 연차자`, vNames);
                 };
 
                 cell.append(dDiv, sDiv);
@@ -174,25 +189,44 @@
             }
         }
 
-        function showModal(title, names) {
-            document.getElementById('modalHeader').textContent = title;
-            document.getElementById('modalHeader').className = "p-4 border-b font-black text-center text-lg bg-purple-50 text-purple-700";
+        // 연차 확인 모달
+        function showVocationModal(title, names) {
+            const head = document.getElementById('modalHeader');
+            head.textContent = title;
+            head.className = "p-4 border-b font-black text-center text-lg bg-purple-50 text-purple-700";
             document.getElementById('modalBody').innerHTML = names.map(n => `<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">${n}</div>`).join('');
+            document.getElementById('modalConfirmBtn').classList.add('hidden');
             document.getElementById('commonModal').classList.add('active');
         }
 
-        function openConfig() {
-            document.getElementById('modalHeader').textContent = "⚙️ 관리자 설정";
-            document.getElementById('modalHeader').className = "p-4 border-b font-black text-center text-lg bg-slate-50 text-slate-700";
-            document.getElementById('modalBody').innerHTML = `<input type="password" id="pw" class="w-full p-3 bg-slate-100 rounded-xl text-center" placeholder="비밀번호 입력">`;
+        // [해결] 설정 인증 모달 (인증 버튼 포함)
+        function openConfigModal() {
+            const head = document.getElementById('modalHeader');
+            head.textContent = "⚙️ 관리자 인증";
+            head.className = "p-4 border-b font-black text-center text-lg bg-slate-50 text-slate-700";
+            document.getElementById('modalBody').innerHTML = `
+                <p class="text-sm text-slate-500 mb-1">비밀번호를 입력하세요</p>
+                <input type="password" id="pwInput" class="w-full p-4 bg-slate-100 rounded-2xl text-center text-xl tracking-widest outline-none border-2 border-transparent focus:border-slate-300" placeholder="••••">
+            `;
+            const cBtn = document.getElementById('modalConfirmBtn');
+            cBtn.classList.remove('hidden');
+            cBtn.onclick = () => {
+                if(document.getElementById('pwInput').value === config.adminPassword) {
+                    alert('인증 성공! 설정 메뉴로 이동합니다.');
+                    closeModal();
+                } else {
+                    alert('비밀번호가 올바르지 않습니다.');
+                }
+            };
             document.getElementById('commonModal').classList.add('active');
+            setTimeout(() => document.getElementById('pwInput').focus(), 100);
         }
 
         function closeModal() { document.getElementById('commonModal').classList.remove('active'); }
         function changeMonth(v) { currentMonth += v; if(currentMonth<0){currentMonth=11;currentYear--;} else if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
         
         window.onload = init;
-        window.onfocus = render; // 탭 이동 시 자동 갱신
+        window.onfocus = render; 
     </script>
 </body>
 </html>
