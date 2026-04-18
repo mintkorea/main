@@ -3,305 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>성의교정 커스텀 근무달력</title>
+    <title>성의교정 통합 근무달력</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
         
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background-color: #f8fafc;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        /* 달력 그리드 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; }
+        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; background: white; position: relative; aspect-ratio: 1 / 1.35; cursor: pointer; }
 
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            border-top: 1px solid #e2e8f0;
-            border-left: 1px solid #e2e8f0;
-        }
-
-        .calendar-cell {
-            border-right: 1px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            background: white;
-            position: relative;
-            aspect-ratio: 1 / 1.35;
-        }
-
-        .date-area {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-            position: relative;
-            z-index: 10;
-        }
-
-        .shift-area {
-            flex: 1.3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: 16px;
-            position: relative;
-            z-index: 10;
-        }
-
-        .is-selected-day::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border: 3px solid #ef4444;
-            z-index: 20;
-            pointer-events: none;
+        /* [요청] 투톤 디자인: 상단 숫자 영역 */
+        .date-area { 
+            flex: 1; display: flex; align-items: center; justify-content: center; 
+            font-weight: 700; font-size: 15px; position: relative; z-index: 10;
+            background-color: rgba(255, 255, 255, 0.6); 
         }
         
-        .is-selected-day::after {
-            content: "TODAY";
-            position: absolute;
-            top: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 9px;
-            font-weight: 900;
-            color: #ef4444;
-            z-index: 21;
+        /* [요청] 투톤 디자인: 하단 근무 영역 */
+        .shift-area { 
+            flex: 1.3; display: flex; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: 18px; position: relative; z-index: 10; 
         }
+
+        /* 하이라이트 투톤 적용 */
+        .cell-highlighted .date-area { background-color: rgba(255, 255, 255, 0.3) !important; color: #fff !important; }
+        .cell-highlighted .shift-area { color: #fff !important; }
+
+        /* 연차 보라색 원 */
+        .v-mark { position: absolute; width: 30px; height: 30px; background-color: #f3e8ff; border: 1px solid #d8b4fe; border-radius: 50%; z-index: -1; }
 
         .sunday { color: #ef4444; }
         .saturday { color: #3b82f6; }
+        .is-today::before { content: ''; position: absolute; inset: 0; border: 4px solid #ef4444; z-index: 20; pointer-events: none; }
 
-        .cell-highlighted .date-area {
-            color: #ffffff !important;
-        }
+        /* 모달 스타일 */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; } /* active 클래스 추가 시 보임 */
         
-        .cell-highlighted .shift-area {
-            color: #ffffff !important;
-        }
-
-        .nav-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background-color: #f1f5f9;
-            color: #475569;
-            font-weight: 800;
-            transition: all 0.2s;
-        }
-        .nav-btn:active { background-color: #e2e8f0; transform: scale(0.95); }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(8px);
-            z-index: 100;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.active { display: flex; }
+        .nav-btn { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background-color: #f1f5f9; color: #475569; font-weight: 800; }
     </style>
 </head>
-<body class="p-3 md:p-6">
+<body class="p-3">
 
-    <div id="appContainer" class="max-w-md mx-auto">
+    <div class="max-w-md mx-auto">
         <header class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-4 p-4">
-            <div class="flex items-center justify-between mb-3 border-b border-gray-50 pb-2">
+            <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
-                    <span id="displayAppIcon" class="text-xl">🎯</span>
-                    <h1 id="displayAppTitle" class="text-xl font-black text-gray-800">근무달력</h1>
+                    <span class="text-xl">📅</span>
+                    <h1 class="text-xl font-black text-slate-800">성의교정 근무달력</h1>
                 </div>
-                <button id="openAuthBtn" class="text-[11px] font-extrabold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">⚙️ 설정</button>
+                <button onclick="openConfig()" class="text-[11px] font-extrabold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">⚙️ 설정</button>
             </div>
             
             <div class="flex items-center justify-between mb-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
                 <span class="text-xs font-bold text-slate-500 ml-1">강조 표시:</span>
-                <select id="shiftSelect" class="text-xs p-1.5 bg-white text-gray-700 rounded-lg font-bold outline-none w-32 border border-gray-200">
-                    <option value="none">강조 없음</option>
-                </select>
+                <select id="shiftSelect" class="text-xs p-1.5 bg-white text-gray-700 rounded-lg font-bold outline-none w-32 border border-gray-200" onchange="render()"></select>
             </div>
 
             <div class="flex items-center justify-between bg-white p-1 rounded-xl border border-gray-100">
-                <button id="prevMonth" class="nav-btn">＜</button>
-                <h2 id="currentDisplayTitle" class="text-lg font-black text-slate-800">2026년 4월</h2>
-                <button id="nextMonth" class="nav-btn">＞</button>
+                <button onclick="changeMonth(-1)" class="nav-btn">＜</button>
+                <h2 id="monthTitle" class="text-[17px] font-black"></h2>
+                <button onclick="changeMonth(1)" class="nav-btn">＞</button>
             </div>
         </header>
 
-        <div id="calendarArea" class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
-            <div class="grid grid-cols-7 text-center font-bold text-[11px] py-3 bg-slate-50 border-b border-gray-100 text-slate-400">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+            <div class="grid grid-cols-7 text-center font-bold text-[11px] py-3 bg-slate-50 border-b text-slate-400">
                 <div class="sunday">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="saturday">토</div>
             </div>
-            <div id="singleCalendarBody" class="calendar-grid"></div>
+            <div id="calendarBody" class="calendar-grid"></div>
         </div>
     </div>
 
-    <div id="authModal" class="modal-overlay">
-        <div class="bg-white p-8 rounded-3xl w-72 text-center">
-            <h3 class="font-black mb-4">설정 인증</h3>
-            <input type="password" id="authPasswordInput" class="w-full p-3 bg-slate-50 border rounded-xl mb-4 text-center tracking-widest" placeholder="••••">
-            <div class="flex gap-2">
-                <button id="closeAuthBtn" class="flex-1 py-3 bg-slate-100 rounded-xl font-bold">취소</button>
-                <button id="confirmAuthBtn" class="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>
-            </div>
+    <div id="commonModal" class="modal-overlay" onclick="closeModal()">
+        <div class="bg-white rounded-3xl w-72 overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+            <div id="modalHeader" class="p-4 border-b font-black text-center text-lg"></div>
+            <div id="modalBody" class="p-5 space-y-2 font-bold text-center"></div>
+            <button onclick="closeModal()" class="w-full p-4 bg-slate-800 text-white font-bold">닫기</button>
         </div>
     </div>
 
     <script>
-        // 수정된 설정: A조(황색), B조(적색), C조(청색)
-        // [설정 포인트] baseDate를 2025-01-01로 설정하여 C-A-B 순환이 정확하도록 맞춤
+        // 기본 설정 및 데이터 연동
         const config = {
-            appTitle: '성의교정 근무달력',
-            appIcon: '📅',
-            baseDate: '2025-01-01', // 기준일 (이 날은 C조 근무일)
-            adminPassword: '0000',
+            baseDate: '2025-01-01',
             pattern: [
-                { name: 'C', color: '#dbeafe', highlight: '#3b82f6' }, // C조: 청색
-                { name: 'A', color: '#fef3c7', highlight: '#f59e0b' }, // A조: 황색
-                { name: 'B', color: '#fee2e2', highlight: '#ef4444' }  // B조: 적색
+                { name: 'C', color: '#dbeafe', highlight: '#3b82f6' },
+                { name: 'A', color: '#fef3c7', highlight: '#f59e0b' },
+                { name: 'B', color: '#fee2e2', highlight: '#ef4444' }
             ]
         };
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        let currentYear = today.getFullYear();
-        let currentMonth = today.getMonth();
+        let currentYear = 2026, currentMonth = 3; // 4월 기준
+        const today = new Date(); today.setHours(0,0,0,0);
 
-        function initAppUI() {
-            document.getElementById('displayAppTitle').textContent = config.appTitle;
-            document.getElementById('displayAppIcon').textContent = config.appIcon;
-            
-            const shiftSelect = document.getElementById('shiftSelect');
-            shiftSelect.innerHTML = '<option value="none">강조 없음</option>';
+        function init() {
+            const select = document.getElementById('shiftSelect');
+            select.innerHTML = '<option value="none">강조 없음</option>';
             config.pattern.forEach(p => {
                 const opt = document.createElement('option');
-                opt.value = p.name;
-                opt.textContent = `${p.name}조 강조`;
-                shiftSelect.appendChild(opt);
+                opt.value = p.name; opt.textContent = `${p.name}조 강조`;
+                if(p.name === 'C') opt.selected = true;
+                select.appendChild(opt);
             });
+            render();
         }
 
         function render() {
-            document.getElementById('currentDisplayTitle').textContent = `${currentYear}년 ${currentMonth + 1}월`;
-            const container = document.getElementById('singleCalendarBody');
+            // 연차 관리 대장(vocation.html)의 데이터 읽기
+            const vData = JSON.parse(localStorage.getItem('v_data_v34')) || {};
+            const mKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            
+            document.getElementById('monthTitle').textContent = `${currentYear}년 ${currentMonth + 1}월`;
+            const container = document.getElementById('calendarBody');
             container.innerHTML = '';
             
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const base = new Date(config.baseDate);
-            base.setHours(0, 0, 0, 0);
-            
+            const base = new Date(config.baseDate); base.setHours(0,0,0,0);
             const targetShift = document.getElementById('shiftSelect').value;
 
-            // 이전 달 빈칸 채우기
             for (let i = 0; i < firstDay; i++) {
-                const emptyCell = document.createElement('div');
-                emptyCell.className = 'calendar-cell bg-gray-50/50';
-                container.appendChild(emptyCell);
+                container.appendChild(Object.assign(document.createElement('div'), { className: 'calendar-cell bg-slate-50/30' }));
             }
 
-            // 날짜 렌더링
             for (let d = 1; d <= lastDate; d++) {
-                const curr = new Date(currentYear, currentMonth, d);
-                curr.setHours(0, 0, 0, 0);
-                
-                // 근무 조 계산 (C-A-B 순환)
-                const diff = Math.floor((curr - base) / (1000 * 60 * 60 * 24));
-                const pIdx = ((diff % config.pattern.length) + config.pattern.length) % config.pattern.length;
-                const shift = config.pattern[pIdx];
+                const curr = new Date(currentYear, currentMonth, d); curr.setHours(0,0,0,0);
+                const diff = Math.floor((curr - base) / 86400000);
+                const shift = config.pattern[((diff % 3) + 3) % 3];
+
+                // 연차자 체크
+                let vNames = [];
+                const monthV = vData[mKey] || {};
+                for (let name in monthV) {
+                    if (monthV[name].split(',').map(v=>v.trim()).includes(String(d))) vNames.push(name);
+                }
 
                 const cell = document.createElement('div');
                 cell.className = 'calendar-cell';
-                
-                // 오늘 표시
-                if (curr.getTime() === today.getTime()) {
-                    cell.classList.add('is-selected-day');
-                }
+                if (curr.getTime() === today.getTime()) cell.classList.add('is-today');
 
-                // 조별 강조 로직
                 const isHighlighted = (targetShift === shift.name);
                 if (isHighlighted) {
                     cell.classList.add('cell-highlighted');
                     cell.style.backgroundColor = shift.highlight;
                 }
-                
+
                 const dDiv = document.createElement('div');
-                const dayOfWeek = curr.getDay();
-                dDiv.className = `date-area ${dayOfWeek === 0 ? 'sunday' : dayOfWeek === 6 ? 'saturday' : 'text-slate-700'}`;
+                dDiv.className = `date-area ${curr.getDay()===0?'sunday':curr.getDay()===6?'saturday':''}`;
+                if (vNames.length > 0) {
+                    const mark = document.createElement('div');
+                    mark.className = 'v-mark';
+                    dDiv.appendChild(mark);
+                }
                 dDiv.textContent = d;
 
                 const sDiv = document.createElement('div');
                 sDiv.className = 'shift-area';
-                if (!isHighlighted) {
-                    sDiv.style.backgroundColor = shift.color;
-                    sDiv.style.color = '#1e293b'; // 기본 글자색 (진한 남색계열)
-                }
+                if (!isHighlighted) sDiv.style.backgroundColor = shift.color;
                 sDiv.textContent = shift.name;
 
-                cell.appendChild(dDiv);
-                cell.appendChild(sDiv);
+                cell.onclick = () => {
+                    if (vNames.length > 0) showModal(`${currentMonth+1}월 ${d}일 연차자`, vNames);
+                };
+
+                cell.append(dDiv, sDiv);
                 container.appendChild(cell);
             }
         }
 
-        // 이벤트 리스너 설정
-        document.getElementById('shiftSelect').addEventListener('change', render);
+        function showModal(title, names) {
+            document.getElementById('modalHeader').textContent = title;
+            document.getElementById('modalHeader').className = "p-4 border-b font-black text-center text-lg bg-purple-50 text-purple-700";
+            document.getElementById('modalBody').innerHTML = names.map(n => `<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">${n}</div>`).join('');
+            document.getElementById('commonModal').classList.add('active');
+        }
+
+        function openConfig() {
+            document.getElementById('modalHeader').textContent = "⚙️ 관리자 설정";
+            document.getElementById('modalHeader').className = "p-4 border-b font-black text-center text-lg bg-slate-50 text-slate-700";
+            document.getElementById('modalBody').innerHTML = `<input type="password" id="pw" class="w-full p-3 bg-slate-100 rounded-xl text-center" placeholder="비밀번호 입력">`;
+            document.getElementById('commonModal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('commonModal').classList.remove('active'); }
+        function changeMonth(v) { currentMonth += v; if(currentMonth<0){currentMonth=11;currentYear--;} else if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
         
-        document.getElementById('prevMonth').onclick = () => {
-            currentMonth--;
-            if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            }
-            render();
-        };
-
-        document.getElementById('nextMonth').onclick = () => {
-            currentMonth++;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            }
-            render();
-        };
-
-        document.getElementById('openAuthBtn').onclick = () => {
-            document.getElementById('authModal').classList.add('active');
-            document.getElementById('authPasswordInput').focus();
-        };
-
-        document.getElementById('closeAuthBtn').onclick = () => {
-            document.getElementById('authModal').classList.remove('active');
-            document.getElementById('authPasswordInput').value = '';
-        };
-
-        document.getElementById('confirmAuthBtn').onclick = () => {
-            if (document.getElementById('authPasswordInput').value === config.adminPassword) {
-                alert('인증 성공! (설정 기능은 추후 구현)');
-                document.getElementById('authModal').classList.remove('active');
-            } else {
-                alert('비밀번호가 틀렸습니다.');
-            }
-            document.getElementById('authPasswordInput').value = '';
-        };
-
-        // 초기화 실행
-        window.addEventListener('DOMContentLoaded', () => {
-            initAppUI();
-            render();
-        });
+        window.onload = init;
+        window.onfocus = render; // 탭 이동 시 자동 갱신
     </script>
 </body>
 </html>
