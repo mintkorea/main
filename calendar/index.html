@@ -27,13 +27,21 @@
         }
         #floatingList.active { right: 0; }
         
-        /* 연차 명단 한 줄 레이아웃 */
-        .list-card { background: white; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
-        .v-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; }
+        /* 연차 명단 카드 스타일 */
+        .list-card { background: white; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
+        .v-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+        
+        /* [수정] 건물+이름 배지 스타일 */
         .v-badge { 
-            display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; 
-            border-radius: 6px; font-size: 12px; font-weight: 800; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; 
+            border-radius: 8px; font-size: 13px; font-weight: 800; white-space: nowrap;
             border: 1.5px solid currentColor;
+        }
+        .v-bname { opacity: 0.7; font-size: 11px; font-weight: 700; border-right: 1px solid currentColor; padding-right: 5px; margin-right: 2px; }
+
+        /* [수정] 근무조 진한 컬러 배지 */
+        .shift-badge {
+            font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px; color: white;
         }
 
         .fab { 
@@ -79,7 +87,7 @@
         <div class="p-4 bg-white border-b flex justify-between items-center sticky top-0 z-10">
             <h2 class="font-black text-lg text-slate-800">연차자 명단</h2>
             <div class="flex gap-2">
-                <button id="togglePast" onclick="toggleHidePast()" class="text-[10px] bg-slate-100 px-2 py-1 rounded font-bold text-slate-500">전체보기</button>
+                <button id="togglePast" onclick="toggleHidePast()" class="text-[10px] bg-slate-100 px-3 py-1.5 rounded-full font-bold text-slate-500">전체보기</button>
                 <button onclick="toggleFloatingList()" class="text-xl px-2">✕</button>
             </div>
         </div>
@@ -101,6 +109,7 @@
         let settings = JSON.parse(localStorage.getItem('cal_settings')) || {
             title: "성의교정 근무달력", adminPw: "1234", baseDate: "2026/03/09",
             shifts: ['C', 'A', 'B'],
+            // 조별 컬러 설정 (연한색, 진한색)
             colors: { C: ['#eff6ff', '#3b82f6'], A: ['#fffbeb', '#f59e0b'], B: ['#fef2f2', '#ef4444'] }
         };
 
@@ -180,14 +189,14 @@
 
                 const item = document.createElement('div');
                 item.id = 'row-' + d;
-                item.className = `list-card ${curr.getTime() === today.getTime() ? 'border-red-400 bg-red-50/30' : ''}`;
+                item.className = `list-card ${curr.getTime() === today.getTime() ? 'ring-2 ring-red-400 bg-red-50/30' : ''}`;
                 
                 let html = `
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-black ${curr.getDay()===0?'text-red-500':curr.getDay()===6?'text-blue-500':'text-slate-500'}">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <span class="text-[14px] font-black ${curr.getDay()===0?'text-red-500':curr.getDay()===6?'text-blue-500':'text-slate-600'}">
                             ${currentMonth+1}/${d} (${['일','월','화','수','목','금','토'][curr.getDay()]})
                         </span>
-                        <span class="text-[9px] font-black px-1.5 py-0.5 rounded border" style="border-color:${sCol[1]}; color:${sCol[1]}">${sName}조</span>
+                        <span class="shift-badge" style="background:${sCol[1]}">${sName}조</span>
                     </div>
                     <div class="v-row">
                 `;
@@ -195,7 +204,7 @@
                 vList.forEach(v => {
                     html += `
                         <div class="v-badge" style="color:${sCol[1]}; background:${sCol[0]}">
-                            <span class="opacity-50 text-[10px] mr-1">${v.g}</span>
+                            <span class="v-bname">${v.g}</span>
                             <span>${v.name}</span>
                         </div>
                     `;
@@ -212,7 +221,9 @@
                 if (monthV[name].split(',').map(v=>v.trim()).includes(String(day))) {
                     const info = staffData.find(s => s.n === name);
                     if(info) {
-                        vList.push({ name, g: info.g.replace('성의회관','성의').replace('옴니버스','옴니'), s: info.s });
+                        // 명칭 풀네임 처리
+                        let buildingName = info.g.includes("성의") ? "성의회관" : (info.g.includes("옴니") ? "옴니버스파크" : info.g);
+                        vList.push({ name, g: buildingName, s: info.s });
                         if(info.g.includes("성의")) hasSung = true;
                         else if(info.g.includes("옴니")) hasOmni = true;
                     }
@@ -226,7 +237,7 @@
         function toggleFloatingList() { document.getElementById('floatingList').classList.toggle('active'); }
         function toggleHidePast() { 
             hidePast = !hidePast; 
-            document.getElementById('togglePast').textContent = hidePast ? "전체보기" : "지나간 연차 숨김";
+            document.getElementById('togglePast').textContent = hidePast ? "전체보기" : "오늘 이후만 보기";
             render(); 
         }
         function changeMonth(v) { currentMonth += v; if(currentMonth<0){currentMonth=11;currentYear--;} else if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
