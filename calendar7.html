@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>성의교정 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDK (Compat Version) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
@@ -13,35 +12,42 @@
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; }
         .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; background: white; position: relative; aspect-ratio: 1 / 1.35; cursor: pointer; }
-        .date-area { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; }
-        .shift-area { flex: 1.3; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; position: relative; }
-        .cell-highlighted .date-area { color: #ffffff !important; }
+        
+        /* [수정] 날짜 영역: 점 위치 확보를 위해 상대 좌표 설정 */
+        .date-area { flex: 1.2; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; position: relative; }
+        .shift-area { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; }
+        
+        /* [추가] 강조 투톤 처리 */
+        .cell-highlighted .date-area { background-color: rgba(255,255,255,0.7); } 
         .cell-highlighted .shift-area { color: #ffffff !important; }
+
         .is-today { border: 3px solid #ef4444 !important; z-index: 30; }
         .is-today::after { content: 'TODAY'; position: absolute; top: -1px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; font-size: 8px; font-weight: 900; padding: 1px 4px; border-radius: 0 0 4px 4px; }
         
-        /* 연차 마킹 점 스타일 */
-        .v-dot { position: absolute; top: 4px; width: 8px; height: 8px; border-radius: 50%; }
-        .dot-sung { right: 4px; background-color: #a855f7; } 
-        .dot-omni { left: 4px; background-color: #f97316; }  
-        .dot-etc { right: 4px; bottom: 4px; background-color: #14b8a6; } 
+        /* [수정] 연차 점: 날짜 영역 하단으로 배치 */
+        .v-dots-container { position: absolute; bottom: 2px; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; }
+        .v-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .dot-sung { background-color: #a855f7; } 
+        .dot-omni { background-color: #f97316; }  
+        .dot-etc { background-color: #14b8a6; } 
 
         .sunday { color: #ef4444; }
         .saturday { color: #3b82f6; }
         
-        /* 🎨 모달 애니메이션 및 레이아웃 */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: white; width: 100%; max-width: 350px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        
         .nav-btn { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background-color: #f1f5f9; color: #475569; font-weight: 800; }
+        
+        /* 관리자용 인풋 */
+        .admin-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; margin-top: 4px; }
     </style>
 </head>
 <body class="p-3">
     <div class="max-w-md mx-auto">
         <header class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-4 p-4">
             <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="adminClick()">
                     <span class="text-xl">📅</span>
                     <h1 id="appTitle" class="text-xl font-black text-slate-800">성의교정 근무달력</h1>
                 </div>
@@ -60,22 +66,36 @@
         <div id="calendarBody" class="calendar-grid bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200"></div>
     </div>
 
-    <!-- 🎨 통일된 공통 모달 -->
+    <!-- 공통 모달 (연차 확인용) -->
     <div id="commonModal" class="modal-overlay" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <!-- 헤더: PC 버전과 동일한 파란색 테마 -->
-            <div id="modalHeader" class="bg-[#3498db] p-5 text-white font-bold text-center text-lg tracking-wider"></div>
-            <!-- 본문: 리스트 스타일 -->
-            <div id="modalBody" class="p-6 space-y-3 font-medium max-h-[60vh] overflow-y-auto bg-white"></div>
-            <!-- 푸터: 버튼 스타일 -->
-            <div id="modalFooter" class="flex">
-                <button onclick="closeModal()" class="flex-1 p-4 bg-gray-50 text-gray-700 font-bold border-t border-gray-100 active:bg-gray-100">닫기</button>
+            <div id="modalHeader" class="bg-[#3498db] p-5 text-white font-bold text-center text-lg"></div>
+            <div id="modalBody" class="p-6 space-y-3 max-h-[60vh] overflow-y-auto"></div>
+            <div class="flex"><button onclick="closeModal()" class="flex-1 p-4 bg-gray-50 font-bold border-t">닫기</button></div>
+        </div>
+    </div>
+
+    <!-- 관리자 모달 -->
+    <div id="adminModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="bg-slate-800 p-4 text-white font-bold text-center">환경 설정 (Admin)</div>
+            <div class="p-5 space-y-4 text-sm overflow-y-auto max-h-[70vh]">
+                <div><label class="font-bold">앱 타이틀</label><input id="setAppTitle" class="admin-input"></div>
+                <div><label class="font-bold">관리자 비번</label><input id="setAdminPw" type="password" class="admin-input"></div>
+                <div><label class="font-bold">근무 타입 (콤마 구분)</label><input id="setShiftOrder" class="admin-input" placeholder="C,A,B"></div>
+                <div id="colorSettings" class="space-y-2">
+                    <label class="font-bold">조별 색상 (배경, 강조)</label>
+                    <!-- 자바스크립트로 생성 -->
+                </div>
+            </div>
+            <div class="flex border-t">
+                <button onclick="closeAdmin()" class="flex-1 p-3 bg-gray-100 font-bold">취소</button>
+                <button onclick="saveSettings()" class="flex-1 p-3 bg-blue-600 text-white font-bold">저장</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyDGDUudF49hnXwU55er7joyeSLEPrme1GU",
             authDomain: "catholic-security-system.firebaseapp.com",
@@ -84,50 +104,98 @@
             messagingSenderId: "978946205343",
             appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // 초기 설정값 (로컬스토리지 우선)
         let settings = JSON.parse(localStorage.getItem('cal_settings')) || {
             title: "성의교정 근무달력",
+            adminPw: "1234",
             baseDate: "2026-03-09",
-            colors: { C: ['#dbeafe', '#3b82f6'], A: ['#fef3c7', '#f59e0b'], B: ['#fee2e2', '#ef4444'] }
+            shifts: ['C', 'A', 'B'],
+            colors: { 
+                C: ['#dbeafe', '#3b82f6'], 
+                A: ['#fef3c7', '#f59e0b'], 
+                B: ['#fee2e2', '#ef4444'] 
+            }
         };
 
-        let staffData = [];
-        let vData = {};
+        let staffData = [], vData = {}, clickCount = 0;
         const today = new Date(); today.setHours(0,0,0,0);
         let currentYear = today.getFullYear(), currentMonth = today.getMonth();
 
-        function initSync() {
+        function adminClick() {
+            clickCount++;
+            if(clickCount >= 5) {
+                const pw = prompt("관리자 비밀번호를 입력하세요.");
+                if(pw === settings.adminPw) openAdmin();
+                clickCount = 0;
+            }
+            setTimeout(() => { clickCount = 0; }, 2000);
+        }
+
+        function openAdmin() {
+            document.getElementById('setAppTitle').value = settings.title;
+            document.getElementById('setAdminPw').value = settings.adminPw;
+            document.getElementById('setShiftOrder').value = settings.shifts.join(',');
+            
+            const colorArea = document.getElementById('colorSettings');
+            colorArea.innerHTML = '<label class="font-bold">조별 색상 (연한 배경, 강조색)</label>';
+            settings.shifts.forEach(s => {
+                const c = settings.colors[s] || ['#ffffff', '#000000'];
+                colorArea.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 font-bold">${s}</span>
+                        <input type="color" id="bg_${s}" value="${c[0]}" class="h-8">
+                        <input type="color" id="fg_${s}" value="${c[1]}" class="h-8">
+                    </div>`;
+            });
+            document.getElementById('adminModal').classList.add('active');
+        }
+
+        function saveSettings() {
+            settings.title = document.getElementById('setAppTitle').value;
+            settings.adminPw = document.getElementById('setAdminPw').value;
+            const newShifts = document.getElementById('setShiftOrder').value.split(',').map(v => v.trim().toUpperCase());
+            settings.shifts = newShifts;
+            
+            newShifts.forEach(s => {
+                const bg = document.getElementById(`bg_${s}`)?.value || '#f0f2f5';
+                const fg = document.getElementById(`fg_${s}`)?.value || '#000000';
+                settings.colors[s] = [bg, fg];
+            });
+
+            localStorage.setItem('cal_settings', JSON.stringify(settings));
+            alert("설정이 저장되었습니다.");
+            location.reload();
+        }
+
+        function closeAdmin() { document.getElementById('adminModal').classList.remove('active'); }
+
+        function init() {
+            document.getElementById('appTitle').textContent = settings.title;
+            const select = document.getElementById('shiftSelect');
+            select.innerHTML = '<option value="none" selected>강조 없음</option>';
+            settings.shifts.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name; opt.textContent = `${name}조 강조`;
+                select.appendChild(opt);
+            });
             db.collection("vocation_app").doc("data").onSnapshot((doc) => {
                 if (doc.exists) {
-                    const data = doc.data();
-                    staffData = data.staff || [];
-                    vData = data.vocation || {};
+                    staffData = doc.data().staff || [];
+                    vData = doc.data().vocation || {};
                     document.getElementById('dbStatus').innerText = "● 실시간 연결됨";
                     render();
                 }
             });
         }
 
-        function init() {
-            document.getElementById('appTitle').textContent = settings.title;
-            const select = document.getElementById('shiftSelect');
-            select.innerHTML = '<option value="none" selected>강조 없음</option>';
-            ['C', 'A', 'B'].forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name; opt.textContent = `${name}조 강조`;
-                select.appendChild(opt);
-            });
-            initSync();
-        }
-
         function render() {
             const mKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
             document.getElementById('monthTitle').textContent = `${currentYear}년 ${currentMonth + 1}월`;
             const container = document.getElementById('calendarBody');
-            container.innerHTML = '<div class="grid grid-cols-7 text-center font-bold text-[11px] py-3 bg-slate-50 border-b text-slate-400 col-span-7"><div class="sunday">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="saturday">토</div></div>';
+            container.innerHTML = '<div class="grid grid-cols-7 text-center font-bold text-[11px] py-3 bg-slate-50 border-b text-slate-400 col-span-7"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>';
             
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -139,19 +207,17 @@
             for (let d = 1; d <= lastDate; d++) {
                 const curr = new Date(currentYear, currentMonth, d);
                 const diff = Math.floor((curr - base) / 86400000);
-                const shiftIdx = ((diff % 3) + 3) % 3;
-                const shiftName = ['C', 'A', 'B'][shiftIdx];
-                const shiftColor = settings.colors[shiftName];
+                const sArr = settings.shifts;
+                const shiftIdx = ((diff % sArr.length) + sArr.length) % sArr.length;
+                const shiftName = sArr[shiftIdx];
+                const shiftColor = settings.colors[shiftName] || ['#ffffff', '#000000'];
                 
                 let vList = []; 
                 const monthV = vData[mKey] || {};
-                let hasSung = false; 
-                let hasOmni = false; 
-                let hasEtc = false;  
+                let hasSung = false, hasOmni = false, hasEtc = false;
                 
                 for (let name in monthV) {
-                    const daysArr = monthV[name].split(',').map(v => v.trim());
-                    if (daysArr.includes(String(d))) {
+                    if (monthV[name].split(',').map(v=>v.trim()).includes(String(d))) {
                         const info = staffData.find(s => s.n === name);
                         if(info) {
                             vList.push({ name: name, g: info.g, s: info.s });
@@ -164,61 +230,52 @@
 
                 const cell = document.createElement('div');
                 cell.className = 'calendar-cell' + (curr.getTime() === today.getTime() ? ' is-today' : '');
-                if (targetShift === shiftName) { 
-                    cell.classList.add('cell-highlighted'); 
-                    cell.style.backgroundColor = shiftColor[1]; 
-                }
-
+                
                 const dDiv = document.createElement('div');
                 dDiv.className = `date-area ${curr.getDay()===0?'sunday':curr.getDay()===6?'saturday':''}`;
                 dDiv.textContent = d;
 
+                // [수정] 점들을 담는 컨테이너 (날짜 하단)
+                const dotContainer = document.createElement('div');
+                dotContainer.className = 'v-dots-container';
+                if(hasSung) dotContainer.innerHTML += '<div class="v-dot dot-sung"></div>';
+                if(hasOmni) dotContainer.innerHTML += '<div class="v-dot dot-omni"></div>';
+                if(hasEtc) dotContainer.innerHTML += '<div class="v-dot dot-etc"></div>';
+                dDiv.appendChild(dotContainer);
+
                 const sDiv = document.createElement('div');
                 sDiv.className = 'shift-area';
-                if (targetShift !== shiftName) sDiv.style.backgroundColor = shiftColor[0];
                 sDiv.textContent = shiftName;
 
-                if (hasSung) {
-                    const dot = document.createElement('div');
-                    dot.className = 'v-dot dot-sung';
-                    sDiv.appendChild(dot);
-                }
-                if (hasOmni) {
-                    const dot = document.createElement('div');
-                    dot.className = 'v-dot dot-omni';
-                    sDiv.appendChild(dot);
-                }
-                if (hasEtc && !hasSung) {
-                    const dot = document.createElement('div');
-                    dot.className = 'v-dot dot-etc';
-                    sDiv.appendChild(dot);
+                // 강조색 로직 (투톤)
+                if (targetShift === shiftName) {
+                    cell.classList.add('cell-highlighted');
+                    cell.style.backgroundColor = shiftColor[1]; // 배경을 강조색으로
+                    sDiv.style.color = "white";
+                } else {
+                    sDiv.style.backgroundColor = shiftColor[0]; // 평소엔 연한 배경색
                 }
 
-                if (vList.length > 0) {
-                    cell.onclick = () => showVNames(`${currentMonth+1}월 ${d}일 연차 현황`, vList);
-                }
+                if (vList.length > 0) cell.onclick = () => showVNames(`${currentMonth+1}월 ${d}일 연차 현황`, vList);
                 
                 cell.append(dDiv, sDiv);
                 container.appendChild(cell);
             }
         }
 
-        // 🎨 통일된 모달 리스트 렌더링 함수
         function showVNames(title, list) {
             const h = document.getElementById('modalHeader'), b = document.getElementById('modalBody');
             h.textContent = title;
-            b.innerHTML = list.map(item => {
-                return `<div class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-center">
-                            <span class="text-[11px] text-gray-400 block mb-1">[${item.g}]</span>
-                            <span class="text-slate-700 font-bold">${item.s} ${item.name}</span>
-                        </div>`;
-            }).join('');
+            b.innerHTML = list.map(item => `
+                <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-center">
+                    <span class="text-[11px] text-gray-400 block">[${item.g}]</span>
+                    <span class="text-slate-700 font-bold">${item.s} ${item.name}</span>
+                </div>`).join('');
             document.getElementById('commonModal').classList.add('active');
         }
 
         function closeModal() { document.getElementById('commonModal').classList.remove('active'); }
         function changeMonth(v) { currentMonth += v; if(currentMonth<0){currentMonth=11;currentYear--;} else if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
-        
         window.onload = init;
     </script>
 </body>
