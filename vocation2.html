@@ -2,64 +2,89 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>성의교정 통합 관리 시스템</title>
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK (Compat Version) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
         :root { --sat-bg: #f5faff; --sun-bg: #fff5f5; --today-border: #ff0000; --select-border: #0044ff; }
+        
+        /* 기본 레이아웃: 상단 프레임 제거 및 모바일 최적화 */
         html, body { margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; overflow-x: auto; }
         
-        /* 메인 영역: 상단 프레임 제거 후 여백 조정 */
         .content-area { display: flex; justify-content: center; padding: 10px; min-height: 100vh; box-sizing: border-box; }
-        #paper { background: white; width: 297mm; min-height: 210mm; padding: 5mm; display: flex; flex-direction: column; align-items: center; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-
-        #viewTitle { text-align: center; margin: 10px 0 15px 0; font-size: 22px; text-decoration: underline; text-underline-offset: 5px; letter-spacing: 2px; font-weight: bold; }
         
-        /* 테이블 스타일 */
+        /* 인쇄 및 화면 중앙 종이 영역 */
+        #paper { 
+            background: white; 
+            width: 285mm; /* A4 가로(297mm) 대비 안전 여백 확보 */
+            min-height: 200mm; 
+            padding: 7mm; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            position: relative; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.1); 
+        }
+
+        #viewTitle { text-align: center; margin: 5px 0 15px 0; font-size: 22px; font-weight: bold; text-decoration: underline; text-underline-offset: 5px; letter-spacing: 2px; }
+        
+        /* 테이블 스타일: 인쇄 시 페이지 넘침 방지 */
         #tableWrapper { position: relative; width: 100%; overflow-x: visible; }
-        table { border-collapse: collapse; width: 100%; border: 1.8pt solid #000; table-layout: fixed; background: white; z-index: 5; position: relative; }
-        td { border: 0.5pt solid #000; text-align: center; font-weight: bold; height: 18pt; font-size: 11px; padding: 0; }
-        .hdr { background: #f2f2f2 !important; height: 25pt; cursor: pointer; }
+        table { border-collapse: collapse; width: 100%; border: 1.5pt solid #000; table-layout: fixed; background: white; z-index: 5; position: relative; }
+        td { border: 0.5pt solid #000; text-align: center; font-weight: bold; height: 17pt; font-size: 11px; padding: 0; box-sizing: border-box; }
+        
+        .hdr { background: #f2f2f2 !important; height: 24pt; cursor: pointer; }
         .border-right-bold { border-right: 1.5pt solid #000 !important; }
         
-        /* 하이라이트 */
+        /* 컬럼 하이라이트 */
         .col-highlight { position: absolute; pointer-events: none; z-index: 10; top: 0; box-sizing: border-box; }
         .hl-today { border: 2.5px solid var(--today-border); }
         .hl-select { border: 2.5px solid var(--select-border); }
         
+        /* 주말 및 연차 표시 */
         .sat { background-color: var(--sat-bg) !important; color: #007bff !important; }
         .sun { background-color: var(--sun-bg) !important; color: #dc3545 !important; }
-        .v-mark { background-color: #d4edda !important; color: #28a745; cursor: pointer; font-weight: bold; }
+        .v-mark { background-color: #d4edda !important; color: #28a745; cursor: pointer; font-weight: bold; font-size: 12px; }
 
-        /* 하단 컨트롤 영역 */
-        .controls-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; z-index: 2000; }
-        #syncStatus { font-size: 11px; font-weight: bold; color: #7f8c8d; background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 10px; }
-        .floating-bar { display: flex; align-items: center; gap: 8px; background: white; padding: 10px 15px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ddd; }
+        /* 하단 컨트롤 바 (초기화 버튼 제거됨) */
+        .controls-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; z-index: 2000; }
+        #syncStatus { font-size: 11px; font-weight: bold; color: #7f8c8d; background: rgba(255,255,255,0.9); padding: 3px 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .floating-bar { display: flex; align-items: center; gap: 8px; background: white; padding: 10px 18px; border-radius: 35px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); border: 1px solid #ddd; }
         
-        .btn { padding: 8px 15px; cursor: pointer; border: none; font-weight: bold; font-size: 13px; border-radius: 20px; transition: 0.2s; }
+        .btn { padding: 8px 16px; cursor: pointer; border: none; font-weight: bold; font-size: 13px; border-radius: 20px; transition: 0.2s; }
         .btn-orange { background: #e67e22; color: white; }
         .btn-blue { background: #3498db; color: white; }
-        .btn-red { background: #e74c3c; color: white; }
-        
-        /* 모달 */
-        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; z-index: 3000; border-radius: 12px; box-shadow: 0 15px 50px rgba(0,0,0,0.4); min-width: 280px; }
-        #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2999; }
-        .modal-hdr { background: #3498db; color: white; padding: 15px; font-weight: bold; text-align: center; border-radius: 12px 12px 0 0; }
-        .modal-body { padding: 20px; text-align: center; line-height: 1.8; }
-        .close-btn { width: 100%; padding: 12px; background: #f8f9fa; border: none; border-top: 1px solid #eee; cursor: pointer; font-weight: bold; border-radius: 0 0 12px 12px; }
+        .btn-blue:hover { background: #2980b9; }
 
+        input[type="month"] { border: 1px solid #ddd; padding: 6px 12px; border-radius: 15px; font-weight: bold; font-family: inherit; cursor: pointer; }
+
+        /* 상세 정보 모달 */
+        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; z-index: 3000; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); min-width: 300px; }
+        #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2999; backdrop-filter: blur(2px); }
+        .modal-hdr { background: #3498db; color: white; padding: 15px; font-weight: bold; text-align: center; border-radius: 15px 15px 0 0; }
+        .modal-body { padding: 25px; text-align: center; line-height: 1.8; font-weight: bold; }
+        .close-btn { width: 100%; padding: 15px; background: #f8f9fa; border: none; border-top: 1px solid #eee; cursor: pointer; font-weight: bold; border-radius: 0 0 15px 15px; }
+
+        /* 📱 모바일 화면 최적화 */
         @media screen and (max-width: 768px) {
             .content-area { padding: 5px; justify-content: flex-start; }
-            #paper { width: fit-content; min-width: 100%; padding: 10px; }
-            #viewTitle { font-size: 18px; }
+            #paper { width: fit-content; min-width: 100%; padding: 10px 5px; box-shadow: none; }
+            #viewTitle { font-size: 18px; letter-spacing: 0; }
+            .floating-bar { padding: 8px 12px; scale: 0.9; transform-origin: right bottom; }
         }
 
-        @media print { 
-            .controls-container, #modal, #modalOverlay, .col-highlight { display: none !important; } 
+        /* 🖨️ 인쇄 설정: 한 페이지에 쏙 들어가도록 강제 */
+        @media print {
+            @page { size: A4 landscape; margin: 5mm; }
             body { background: white; }
-            #paper { box-shadow: none; padding: 0; width: 100%; }
+            .content-area { padding: 0; display: block; }
+            #paper { width: 100% !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+            .controls-container, #modal, #modalOverlay, .col-highlight { display: none !important; }
+            table { page-break-inside: avoid; width: 100%; }
+            tr { page-break-inside: avoid; }
+            td { font-size: 10px; height: 15pt; } /* 인쇄 시 폰트 크기 미세 축소 */
         }
     </style>
 </head>
@@ -74,7 +99,7 @@
 
 <div class="content-area">
     <div id="paper">
-        <h2 id="viewTitle">데이터를 불러오는 중...</h2>
+        <h2 id="viewTitle">데이터 연결 중...</h2>
         <div id="tableWrapper">
             <table id="displayTable"></table>
         </div>
@@ -82,9 +107,8 @@
 </div>
 
 <div class="controls-container">
-    <div id="syncStatus">Firestore 연결 시도 중...</div>
+    <div id="syncStatus">Firestore 연결 대기...</div>
     <div class="floating-bar">
-        <button class="btn btn-red" onclick="firstTimeSetup()">초기화</button>
         <input type="month" id="targetMonth" onchange="render()">
         <button class="btn btn-orange" onclick="changeTab('ledger')">연차대장</button>
         <button class="btn btn-blue" onclick="changeTab('schedule')">연차일정표</button>
@@ -112,42 +136,22 @@
     let staffData = [];
     let vData = {};
 
-    async function firstTimeSetup() {
-        if(!confirm("서버의 모든 데이터를 초기화하시겠습니까?")) return;
-        const initialStaff = [
-            { g: "성의교정", s: "관리", p: "소장", n: "이규용" }, { g: "성의교정", s: "관리", p: "부소장", n: "박상현" },
-            { g: "성의회관", s: "관리", p: "반장", n: "유정수" }, { g: "성의회관", s: "A조", p: "조장", n: "배준용" },
-            { g: "성의회관", s: "A조", p: "조원", n: "김영중" }, { g: "성의회관", s: "A조", p: "조원", n: "이명구" },
-            { g: "성의회관", s: "A조", p: "조원", n: "김삼동" }, { g: "성의회관", s: "B조", p: "조장", n: "심규천" },
-            { g: "성의회관", s: "B조", p: "조원", n: "권영국" }, { g: "성의회관", s: "B조", p: "조원", n: "임종현" },
-            { g: "성의회관", s: "B조", p: "조원", n: "전준수" }, { g: "성의회관", s: "C조", p: "조장", n: "황재업" },
-            { g: "성의회관", s: "C조", p: "조원", n: "김태언" }, { g: "성의회관", s: "C조", p: "조원", n: "이태원" },
-            { g: "성의회관", s: "C조", p: "조원", n: "이정석" }, { g: "옴니버스", s: "관리", p: "반장", n: "오재준" },
-            { g: "옴니버스", s: "A조", p: "조장", n: "손병휘" }, { g: "옴니버스", s: "A조", p: "조원", n: "김전식" },
-            { g: "옴니버스", s: "A조", p: "조원", n: "권순호" }, { g: "옴니버스", s: "B조", p: "조장", n: "황일범" },
-            { g: "옴니버스", s: "B조", p: "조원", n: "이상길" }, { g: "옴니버스", s: "B조", p: "조원", n: "허용" },
-            { g: "옴니버스", s: "C조", p: "조장", n: "피재영" }, { g: "옴니버스", s: "C조", p: "조원", n: "남형민" },
-            { g: "옴니버스", s: "C조", p: "조원", n: "강경훈" }, { g: "기숙사", s: "관리", p: "반장", n: "이강택" },
-            { g: "기숙사", s: "관리", p: "조원", n: "유시균" }, { g: "기숙사", s: "관리", p: "조원", n: "이상현" }
-        ];
-        try {
-            await db.collection("vocation_app").doc("data").set({ staff: initialStaff, vocation: {} });
-            alert("초기화 완료!");
-        } catch (e) { alert("실패: " + e.message); }
-    }
-
+    // Firestore 실시간 리스너
     function initSync() {
         db.collection("vocation_app").doc("data").onSnapshot((doc) => {
             if (doc.exists) {
                 const data = doc.data();
                 staffData = data.staff || [];
                 vData = data.vocation || {};
-                document.getElementById('syncStatus').innerText = "● Firestore 연결됨";
+                document.getElementById('syncStatus').innerText = "● Firestore 실시간 연결됨";
                 render();
             } else {
-                document.getElementById('syncStatus').innerText = "● 데이터 없음";
-                document.getElementById('viewTitle').innerText = "초기화가 필요합니다.";
+                document.getElementById('viewTitle').innerText = "데이터가 없습니다.";
+                document.getElementById('syncStatus').innerText = "○ 데이터 없음";
             }
+        }, (error) => {
+            console.error("Firestore Error:", error);
+            document.getElementById('syncStatus').innerText = "X 연결 오류";
         });
     }
 
@@ -155,18 +159,29 @@
         const val = document.getElementById('targetMonth').value;
         if(!val) return;
         const [y, mSelected] = val.split('-').map(Number);
+        
         if (currentTab === 'ledger') renderLedger(y);
         else renderSchedule(y, mSelected);
+
+        // 하이라이트 박스 업데이트 (약간의 지연 후 실행하여 테이블 렌더링 완료 보장)
         setTimeout(() => updateHighlightBoxes(y, mSelected), 50);
     }
 
     function updateHighlightBoxes(y, m) {
         document.querySelectorAll('.col-highlight').forEach(el => el.remove());
         if (currentTab !== 'schedule') return;
+        
         const table = document.getElementById('displayTable');
         const today = new Date();
-        if (today.getFullYear() === y && today.getMonth() + 1 === m) createBox(today.getDate(), 'hl-today');
-        if (selectedScheduleDay) createBox(selectedScheduleDay, 'hl-select');
+        
+        // 오늘 날짜 하이라이트
+        if (today.getFullYear() === y && today.getMonth() + 1 === m) {
+            createBox(today.getDate(), 'hl-today');
+        }
+        // 선택한 날짜 하이라이트
+        if (selectedScheduleDay) {
+            createBox(selectedScheduleDay, 'hl-select');
+        }
 
         function createBox(day, className) {
             const cell = document.querySelector(`.day-cell-${day}`);
@@ -183,56 +198,73 @@
     function renderSchedule(y, m) {
         const lastDay = new Date(y, m, 0).getDate();
         document.getElementById('viewTitle').innerText = `성의교정 연차 일정표(${y}년 ${m}월)`;
-        let h = `<colgroup><col style="width:55px;"><col style="width:40px;"><col style="width:45px;"><col style="width:60px;"></colgroup><thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td class="border-right-bold">성명</td>`;
+        
+        let h = `<colgroup><col style="width:55px;"><col style="width:40px;"><col style="width:45px;"><col style="width:65px;"></colgroup>
+                 <thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td class="border-right-bold">성명</td>`;
+        
         for(let i=1; i<=lastDay; i++) {
             const we = new Date(y, m-1, i).getDay();
             h += `<td class="${we===0?'sun':we===6?'sat':''} day-cell-${i}" style="width:23px;" onclick="selectDay(${i})">${i}</td>`;
         }
-        h += `</tr></thead><tbody>${generateRows(y, m, 0)}</tbody>`;
+        h += `</tr></thead><tbody>${generateRows(y, m)}</tbody>`;
         document.getElementById('displayTable').innerHTML = h;
     }
 
     function renderLedger(y) {
         document.getElementById('viewTitle').innerText = `성의교정 연차 관리대장(${y}년)`;
-        let h = `<colgroup><col style="width:55px;"><col style="width:40px;"><col style="width:45px;"><col style="width:60px;"></colgroup><thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td class="border-right-bold" onclick="toggleEditCol('name')">성명</td>`;
+        
+        let h = `<colgroup><col style="width:55px;"><col style="width:40px;"><col style="width:45px;"><col style="width:65px;"></colgroup>
+                 <thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td class="border-right-bold" onclick="toggleEditCol('name')">성명</td>`;
+        
         for(let i=1; i<=12; i++) {
             const mk = `${y}-${String(i).padStart(2,'0')}`;
-            h += `<td onclick="toggleEditCol('${mk}')" style="width:45px;">${i}월</td>`;
+            h += `<td onclick="toggleEditCol('${mk}')" style="width:43px;">${i}월</td>`;
         }
-        h += `<td style="width:45px;">합계</td></tr></thead><tbody>${generateRows(y, null, 0)}</tbody>`;
+        h += `<td style="width:43px;">합계</td></tr></thead><tbody>${generateRows(y, null)}</tbody>`;
         document.getElementById('displayTable').innerHTML = h;
     }
 
-    function generateRows(y, m, editMonthNum) {
+    function generateRows(y, m) {
         let rows = "";
         staffData.forEach((staff, idx) => {
             const isLastOfGroup = (idx === staffData.length - 1) || (staffData[idx+1].s !== staff.s || staffData[idx+1].g !== staff.g);
             rows += `<tr style="${isLastOfGroup ? 'border-bottom:1.5pt solid #000' : ''}">`;
+            
+            // 구분(성의회관 등) 병합
             if(idx===0 || staffData[idx-1].g !== staff.g) {
                 const gCount = staffData.filter(x => x.g === staff.g).length;
                 rows += `<td rowspan="${gCount}">${staff.g}</td>`;
             }
+            // 조(A조 등) 병합
             if(idx===0 || staffData[idx-1].s !== staff.s || staffData[idx-1].g !== staff.g) {
                 const sCount = staffData.filter(x => x.g === staff.g && x.s === staff.s).length;
                 rows += `<td rowspan="${sCount}">${staff.s}</td>`;
             }
-            rows += `<td>${staff.p}</td>`;
-            if(activeEditColumn === 'name') {
-                rows += `<td class="border-right-bold"><input type="text" style="width:90%; border:none; text-align:center; background:#e3f2fd;" value="${staff.n}" onchange="updateName(${idx}, this.value)"></td>`;
-            } else { rows += `<td class="border-right-bold">${staff.n}</td>`; }
             
-            if (m === null) {
+            rows += `<td>${staff.p}</td>`;
+            
+            // 이름 수정 모드
+            if(activeEditColumn === 'name') {
+                rows += `<td class="border-right-bold"><input type="text" style="width:90%; border:none; text-align:center; background:#e3f2fd; font-weight:bold;" value="${staff.n}" onchange="updateName(${idx}, this.value)"></td>`;
+            } else { 
+                rows += `<td class="border-right-bold">${staff.n}</td>`; 
+            }
+            
+            if (m === null) { // 연차 대장 탭
                 let rowTotal = 0;
                 for(let i=1; i<=12; i++) {
                     const mk = `${y}-${String(i).padStart(2,'0')}`;
                     const val = vData[mk]?.[staff.n] || "";
                     if(val) rowTotal += val.split(',').length;
+                    
                     if(activeEditColumn === mk) {
-                        rows += `<td><input type="text" style="width:90%; border:none; text-align:center; background:#fffde7;" value="${val}" onchange="updateV('${mk}', '${staff.n}', this.value)"></td>`;
-                    } else { rows += `<td>${val}</td>`; }
+                        rows += `<td><input type="text" style="width:90%; border:none; text-align:center; background:#fffde7; font-weight:bold;" value="${val}" onchange="updateV('${mk}', '${staff.n}', this.value)"></td>`;
+                    } else { 
+                        rows += `<td>${val}</td>`; 
+                    }
                 }
                 rows += `<td style="color:blue;">${rowTotal || ''}</td>`;
-            } else {
+            } else { // 연차 일정표 탭
                 const mk = `${y}-${String(m).padStart(2,'0')}`;
                 const vArr = (vData[mk]?.[staff.n] || "").split(',').map(s => s.trim());
                 for(let i=1; i<=new Date(y, m, 0).getDate(); i++) {
@@ -248,19 +280,51 @@
 
     function selectDay(day) { selectedScheduleDay = (selectedScheduleDay === day) ? null : day; render(); }
     function toggleEditCol(colId) { activeEditColumn = (activeEditColumn === colId) ? null : colId; render(); }
-    function updateName(idx, val) { staffData[idx].n = val; saveData(); }
-    async function updateV(mk, n, v) { if(!vData[mk]) vData[mk] = {}; vData[mk][n] = v; await saveData(); }
-    async function saveData() { await db.collection("vocation_app").doc("data").update({ staff: staffData, vocation: vData }); }
-    function changeTab(tab) { currentTab = tab; activeEditColumn = null; selectedScheduleDay = null; render(); }
+    
+    async function updateName(idx, val) {
+        staffData[idx].n = val;
+        await saveData();
+    }
+    
+    async function updateV(mk, n, v) {
+        if(!vData[mk]) vData[mk] = {};
+        vData[mk][n] = v;
+        await saveData();
+    }
+    
+    async function saveData() {
+        try {
+            await db.collection("vocation_app").doc("data").update({ staff: staffData, vocation: vData });
+        } catch (e) {
+            alert("저장 실패: " + e.message);
+        }
+    }
+    
+    function changeTab(tab) { 
+        currentTab = tab; 
+        activeEditColumn = null; 
+        selectedScheduleDay = null; 
+        render(); 
+    }
     
     function showVDetail(staffObj, monthStr) {
         const raw = vData[monthStr]?.[staffObj.n] || "내역 없음";
-        document.getElementById('modalTitle').innerText = `상세 내역`;
-        document.getElementById('modalContent').innerHTML = `<strong>${staffObj.g} (${staffObj.s})</strong><br>${staffObj.p} <b>${staffObj.n}</b>님<br><br><strong>연차 날짜:</strong> ${raw}일`;
+        document.getElementById('modalTitle').innerText = `연차 상세 내역`;
+        document.getElementById('modalContent').innerHTML = `
+            <span style="color:#7f8c8d; font-size:13px;">${staffObj.g} · ${staffObj.s}</span><br>
+            <span style="font-size:18px;">${staffObj.p} <strong style="color:#2c3e50;">${staffObj.n}</strong></span><br><br>
+            <div style="background:#f1f9f1; padding:15px; border-radius:10px; border:1px solid #d4edda;">
+                <span style="color:#27ae60;">[확정된 연차 날짜]</span><br>
+                <span style="font-size:16px;">${raw}일</span>
+            </div>`;
         document.getElementById('modal').style.display = 'block';
         document.getElementById('modalOverlay').style.display = 'block';
     }
-    function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('modalOverlay').style.display = 'none'; }
+
+    function closeModal() { 
+        document.getElementById('modal').style.display = 'none'; 
+        document.getElementById('modalOverlay').style.display = 'none'; 
+    }
 
     window.onload = function() {
         const today = new Date();
