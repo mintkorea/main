@@ -13,22 +13,23 @@
         
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; background: white; }
         
-        /* [수정] 셀을 정사각(1:1)으로 변경 */
-        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; aspect-ratio: 1 / 1; cursor: pointer; overflow: hidden; }
+        /* 전체 셀 구조 */
+        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; cursor: pointer; overflow: hidden; }
         
-        /* 날짜 영역: 숫자와 점을 수직으로 배치 */
-        .date-area { flex: 1.2; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; position: relative; padding-top: 2px; }
+        /* 날짜 영역 */
+        .date-area { height: 45px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; position: relative; }
         
-        /* [수정] 점들이 들어갈 컨테이너: 숫자 아래 배치 */
-        .dot-container { display: flex; gap: 2px; justify-content: center; align-items: center; height: 8px; margin-top: 1px; }
+        /* [수정] 점 컨테이너: 숫자 하단 배치 */
+        .dot-container { display: flex; gap: 2px; justify-content: center; align-items: center; height: 6px; margin-top: 2px; }
         .v-dot { width: 5px; height: 5px; border-radius: 50%; }
         .dot-sung { background-color: #a855f7; } 
         .dot-omni { background-color: #f97316; } 
         .dot-etc { background-color: #14b8a6; } 
 
-        /* 근무 조 영역 */
-        .shift-area { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; z-index: 5; }
+        /* [수정] 근무조 표시 영역: 정사각 크기 유지 */
+        .shift-area { aspect-ratio: 1 / 1; width: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 17px; z-index: 5; }
         
+        /* 강조 모드 시 색상 처리 */
         .cell-highlighted .date-area { background-color: rgba(255,255,255,0.7); }
         .cell-highlighted .shift-area { color: white !important; }
 
@@ -48,28 +49,29 @@
 <body class="p-2">
     <div class="max-w-md mx-auto h-screen flex flex-col">
         <header class="bg-white rounded-xl shadow-sm border border-gray-200 mb-2 p-3">
-            <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2" onclick="adminClick()">
-                    <span class="text-lg">📅</span>
-                    <h1 id="appTitle" class="text-lg font-black text-slate-800 truncate">성의교정 근무달력</h1>
+                    <span class="text-xl">📅</span>
+                    <h1 id="appTitle" class="text-lg font-black text-slate-800">성의교정 근무달력</h1>
                 </div>
-                <div id="dbStatus" class="text-[8px] font-bold text-slate-400 flex-shrink-0">● 연결됨</div>
+                <div id="dbStatus" class="text-[8px] font-bold text-slate-400">● 연결됨</div>
             </div>
             
-            <div class="flex items-center gap-2">
-                <div class="flex items-center bg-white border rounded-lg h-8 flex-shrink-0">
-                    <button onclick="changeMonth(-1)" class="px-2 font-bold text-slate-400">＜</button>
-                    <span id="monthTitle" class="text-xs font-black text-slate-700 min-w-[70px] text-center"></span>
-                    <button onclick="changeMonth(1)" class="px-2 font-bold text-slate-400">＞</button>
+            <!-- [수정] 상단 컨트롤러: 5:5 동일 너비 배치 -->
+            <div class="flex items-center gap-2 w-full">
+                <div class="flex items-center bg-white border rounded-lg h-9 flex-1">
+                    <button onclick="changeMonth(-1)" class="px-3 font-bold text-slate-400">＜</button>
+                    <span id="monthTitle" class="text-xs font-black text-slate-700 flex-1 text-center"></span>
+                    <button onclick="changeMonth(1)" class="px-3 font-bold text-slate-400">＞</button>
                 </div>
-                <select id="shiftSelect" class="text-xs p-1.5 bg-slate-100 text-gray-700 rounded-lg font-bold outline-none border border-slate-200 flex-1 text-center" onchange="render()"></select>
+                <select id="shiftSelect" class="text-xs h-9 bg-slate-100 text-gray-700 rounded-lg font-bold outline-none border border-slate-200 flex-1 text-center" onchange="render()"></select>
             </div>
         </header>
 
         <div id="calendarBody" class="calendar-grid rounded-xl shadow-lg overflow-hidden border border-gray-200"></div>
     </div>
 
-    <!-- 연차 상세 모달 -->
+    <!-- 연차 상세 모달 및 관리자 모달 (기존과 동일) -->
     <div id="commonModal" class="modal-overlay" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div id="modalHeader" class="bg-[#3498db] p-3 text-white font-bold text-center text-sm"></div>
@@ -78,10 +80,9 @@
         </div>
     </div>
 
-    <!-- 관리자 모달 -->
     <div id="adminModal" class="modal-overlay">
         <div class="modal-content">
-            <div class="bg-slate-800 p-3 text-white font-bold text-center text-xs">환경 설정 (비번: 1234)</div>
+            <div class="bg-slate-800 p-3 text-white font-bold text-center text-xs">환경 설정</div>
             <div class="p-4 space-y-3 text-[11px] overflow-y-auto max-h-[60vh]">
                 <div><label class="font-bold">앱 타이틀</label><input id="setAppTitle" class="admin-input"></div>
                 <div><label class="font-bold">관리자 비번</label><input id="setAdminPw" type="password" class="admin-input"></div>
@@ -134,7 +135,7 @@
             document.getElementById('setAdminPw').value = settings.adminPw;
             document.getElementById('setShiftOrder').value = settings.shifts.join(',');
             const colorArea = document.getElementById('colorSettings');
-            colorArea.innerHTML = '<p class="font-bold mb-1">조별 색상 (배경 / 강조색)</p>';
+            colorArea.innerHTML = '<p class="font-bold mb-1">조별 색상</p>';
             settings.shifts.forEach(s => {
                 const c = settings.colors[s] || ['#f1f5f9', '#475569'];
                 colorArea.innerHTML += `<div class="flex items-center gap-2"><span>${s}</span><input type="color" id="bg_${s}" value="${c[0]}"><input type="color" id="fg_${s}" value="${c[1]}"></div>`;
@@ -157,7 +158,7 @@
             document.getElementById('appTitle').textContent = settings.title;
             const select = document.getElementById('shiftSelect');
             select.innerHTML = '<option value="none">강조 없음</option>';
-            settings.shifts.forEach(s => { select.innerHTML += `<option value="${s}">${s}조</option>`; });
+            settings.shifts.forEach(s => { select.innerHTML += `<option value="${s}">${s}조 강조</option>`; });
             
             db.collection("vocation_app").doc("data").onSnapshot(doc => {
                 if(doc.exists) { 
@@ -172,7 +173,7 @@
             const mKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
             document.getElementById('monthTitle').textContent = `${currentYear}년 ${currentMonth + 1}월`;
             const container = document.getElementById('calendarBody');
-            container.innerHTML = '<div class="grid grid-cols-7 text-center font-bold text-[9px] py-1.5 bg-slate-50 border-b text-slate-400 col-span-7"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>';
+            container.innerHTML = '<div class="grid grid-cols-7 text-center font-bold text-[9px] py-2 bg-slate-50 border-b text-slate-400 col-span-7"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>';
             
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -208,7 +209,6 @@
                 const cell = document.createElement('div');
                 cell.className = 'calendar-cell' + (curr.getTime() === today.getTime() ? ' is-today' : '');
                 
-                // 날짜 영역 및 점 컨테이너
                 const dDiv = document.createElement('div');
                 dDiv.className = `date-area ${curr.getDay()===0?'sunday':curr.getDay()===6?'saturday':''}`;
                 
