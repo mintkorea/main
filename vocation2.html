@@ -2,9 +2,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>성의교정 통합 관리 시스템</title>
+    <title>성의교정 통합 관리 시스템 (Firestore)</title>
+    <!-- Firebase SDK (Firestore 전용으로 변경) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
         :root { --sat-bg: #f5faff; --sun-bg: #fff5f5; --today-border: #ff0000; --select-border: #0044ff; }
         body { margin: 0; font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; }
@@ -14,7 +15,7 @@
         .btn { padding: 8px 12px; cursor: pointer; border: none; font-weight: bold; font-size: 13px; border-radius: 20px; transition: 0.2s; }
         .btn-orange { background: #e67e22; color: white; }
         .btn-blue { background: #3498db; color: white; }
-        .btn-red { background: #e74c3c; color: white; } /* 초기화 버튼용 */
+        .btn-red { background: #e74c3c; color: white; }
         .content-area { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 50px); padding: 20px; }
         #paper { background: white; width: 297mm; height: 210mm; padding: 10mm; display: flex; flex-direction: column; align-items: center; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
         #viewTitle { text-align: center; margin: 0 0 10px 0; font-size: 22px; text-decoration: underline; text-underline-offset: 5px; letter-spacing: 2px; }
@@ -26,7 +27,7 @@
         .hl-select { border: 2.5px solid var(--select-border); }
         .sat { background-color: var(--sat-bg) !important; color: #007bff !important; }
         .sun { background-color: var(--sun-bg) !important; color: #dc3545 !important; }
-        .v-mark { background-color: #d4edda !important; color: #28a745; cursor: pointer; font-size: 11px; }
+        .v-mark { background-color: #d4edda !important; color: #28a745; cursor: pointer; }
         #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; z-index: 2000; border-radius: 12px; box-shadow: 0 15px 50px rgba(0,0,0,0.4); min-width: 280px; overflow: hidden; }
         #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1999; }
         .modal-hdr { background: #3498db; color: white; padding: 15px; font-weight: bold; text-align: center; }
@@ -39,7 +40,7 @@
 
 <div class="nav-header">
     <h1>Catholic-Security-System</h1>
-    <div id="syncStatus" style="font-size: 12px; color: #bdc3c7;">데이터 확인 중...</div>
+    <div id="syncStatus" style="font-size: 12px; color: #bdc3c7;">Firestore 확인 중...</div>
 </div>
 
 <div id="modalOverlay" onclick="closeModal()"></div>
@@ -59,7 +60,7 @@
 </div>
 
 <div class="floating-bar">
-    <button class="btn btn-red" onclick="firstTimeSetup()">DB 초기화(최초1회)</button>
+    <button class="btn btn-red" onclick="firstTimeSetup()">Firestore 초기화</button>
     <input type="month" id="targetMonth" onchange="render()">
     <button class="btn btn-orange" onclick="changeTab('ledger')">연차대장</button>
     <button class="btn btn-blue" onclick="changeTab('schedule')">연차일정표</button>
@@ -67,18 +68,18 @@
 </div>
 
 <script>
+    // image_28a886.jpg 설정 기반
     const firebaseConfig = {
         apiKey: "AIzaSyDGDUudF49hnXwU55er7joyeSLEPrme1GU",
         authDomain: "catholic-security-system.firebaseapp.com",
         projectId: "catholic-security-system",
         storageBucket: "catholic-security-system.firebasestorage.app",
         messagingSenderId: "978946205343",
-        appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa",
-        databaseURL: "https://catholic-security-system-default-rtdb.firebaseio.com"
+        appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa"
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const db = firebase.firestore(); // Firestore 인스턴스 사용
 
     let currentTab = 'schedule';
     let activeEditColumn = null;
@@ -86,8 +87,8 @@
     let staffData = [];
     let vData = {};
 
-    // [최초 실행용 데이터 업로드 함수]
-    function firstTimeSetup() {
+    // [중요] Firestore 초기 데이터 세팅
+    async function firstTimeSetup() {
         const initialStaff = [
             { g: "성의교정", s: "관리", p: "소장", n: "이규용" }, { g: "성의교정", s: "관리", p: "부소장", n: "박상현" },
             { g: "성의회관", s: "관리", p: "반장", n: "유정수" }, { g: "성의회관", s: "A조", p: "조장", n: "배준용" },
@@ -104,25 +105,31 @@
             { g: "옴니버스", s: "C조", p: "조원", n: "강경훈" }, { g: "기숙사", s: "관리", p: "반장", n: "이강택" },
             { g: "기숙사", s: "관리", p: "조원", n: "유시균" }, { g: "기숙사", s: "관리", p: "조원", n: "이상현" }
         ];
-        db.ref('vocation_system').set({ staff: initialStaff, vocation: {} })
-        .then(() => alert("서버 데이터 초기화 완료!"));
+        try {
+            await db.collection("vocation_app").doc("data").set({ staff: initialStaff, vocation: {} });
+            alert("Firestore 데이터 초기화 완료!");
+        } catch (e) {
+            alert("에러: 규칙(Rules)을 확인하세요. " + e.message);
+        }
     }
 
     function initSync() {
-        db.ref('vocation_system').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data && data.staff) {
-                staffData = data.staff;
+        db.collection("vocation_app").doc("data").onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                staffData = data.staff || [];
                 vData = data.vocation || {};
-                document.getElementById('syncStatus').innerText = "● 실시간 연결됨";
+                document.getElementById('syncStatus').innerText = "● Firestore 실시간 연결됨";
                 render();
             } else {
-                document.getElementById('syncStatus').innerText = "● 서버 데이터 없음 (초기화 필요)";
+                document.getElementById('syncStatus').innerText = "● Firestore 데이터 없음";
             }
         });
     }
 
-    function saveData() { db.ref('vocation_system').update({ staff: staffData, vocation: vData }); }
+    async function saveData() {
+        await db.collection("vocation_app").doc("data").update({ staff: staffData, vocation: vData });
+    }
 
     function render() {
         const val = document.getElementById('targetMonth').value;
@@ -189,15 +196,13 @@
             rows += `<td>${staff.p}</td>`;
             rows += (activeEditColumn === 'name') ? `<td style="border-right:1.5pt solid #000"><input type="text" style="width:100%; border:none; text-align:center; background:#e3f2fd;" value="${staff.n}" onchange="updateName(${idx}, this.value)"></td>` : `<td style="border-right:1.5pt solid #000">${staff.n}</td>`;
             if (m === null) {
-                let total = 0;
                 for(let i=1; i<=12; i++) {
                     const mk = `${y}-${String(i).padStart(2,'0')}`;
                     const val = vData[mk]?.[staff.n] || "";
-                    total += (val && val.trim() !== "") ? val.split(',').length : 0;
                     if (editMonthNum > 0 && i < editMonthNum) continue;
                     rows += (activeEditColumn === mk) ? `<td><input type="text" style="width:100%; border:none; text-align:center; background:#fffde7;" value="${val}" onchange="updateV('${mk}', '${staff.n}', this.value)"></td>` : `<td>${val}</td>`;
                 }
-                if (!editMonthNum) rows += `<td style="color:blue;">${total || ''}</td>`;
+                if (!editMonthNum) rows += `<td style="color:blue;"></td>`;
             } else {
                 const mk = `${y}-${String(m).padStart(2,'0')}`;
                 const vArr = (vData[mk]?.[staff.n] || "").split(',').map(s => s.trim());
@@ -220,7 +225,7 @@
     function showVDetail(staffObj, monthStr) {
         const raw = vData[monthStr]?.[staffObj.n] || "내역 없음";
         document.getElementById('modalTitle').innerText = `상세 내역`;
-        document.getElementById('modalContent').innerHTML = `<strong>${staffObj.g} ${staffObj.s}</strong><br><span style="font-size:1.2em; color:#3498db;">${staffObj.p} ${staffObj.n}</span><br><br><strong>연차 날짜:</strong> ${raw}일`;
+        document.getElementById('modalContent').innerHTML = `<strong>${staffObj.g} ${staffObj.s}</strong><br>${staffObj.p} ${staffObj.n}<br><br><strong>날짜:</strong> ${raw}일`;
         document.getElementById('modal').style.display = 'block';
         document.getElementById('modalOverlay').style.display = 'block';
     }
