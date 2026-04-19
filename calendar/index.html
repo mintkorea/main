@@ -9,48 +9,42 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
-        /* 달력 스타일 */
+        /* [복구] 달력 및 투톤 하이라이트 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; background: white; }
-        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; min-height: 80px; }
-        .date-area { height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
-        .shift-area { aspect-ratio: 1 / 1; width: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; }
+        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; cursor: pointer; min-height: 80px; overflow: hidden; }
+        .date-area { height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; position: relative; z-index: 10; }
+        .shift-area { aspect-ratio: 1 / 1; width: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; z-index: 5; }
+        
+        /* 조별 강조 시 투톤 효과 */
+        .cell-highlighted .date-area { background-color: rgba(255, 255, 255, 0.7); }
+        .cell-highlighted .shift-area { color: white !important; }
+
+        /* [복구] Today 하이라이트 */
+        .is-today { border: 2px solid #ef4444 !important; z-index: 20; }
+        .is-today::after { content: 'TODAY'; position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 0px 3px; border-radius: 0 0 3px 3px; z-index: 30; }
+        
         .sunday { color: #ef4444; }
         .saturday { color: #3b82f6; }
 
-        /* 플로팅 메뉴 */
-        #floatingList { 
-            position: fixed; top: 0; right: -100%; width: 100%; height: 100%; 
-            background: #f8f9fa; z-index: 200; transition: 0.3s ease-in-out;
-            display: flex; flex-direction: column;
-        }
+        /* [수정] 명단 리스트 스타일 */
+        #floatingList { position: fixed; top: 0; right: -100%; width: 100%; height: 100%; background: #f8f9fa; z-index: 200; transition: 0.3s ease; display: flex; flex-direction: column; }
         #floatingList.active { right: 0; }
+        .list-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
         
-        /* 연차 명단 카드 스타일 */
-        .list-card { background: white; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
-        .v-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
-        
-        /* [수정] 건물+이름 배지 스타일 */
-        .v-badge { 
-            display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; 
-            border-radius: 8px; font-size: 13px; font-weight: 800; white-space: nowrap;
-            border: 1.5px solid currentColor;
-        }
-        .v-bname { opacity: 0.7; font-size: 11px; font-weight: 700; border-right: 1px solid currentColor; padding-right: 5px; margin-right: 2px; }
+        /* 건물 배지 & 이름 텍스트 */
+        .building-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; color: white; margin-right: 6px; }
+        .bg-sung { background-color: #a855f7; } /* 성의회관 보라 */
+        .bg-omni { background-color: #f97316; } /* 옴니버스 주황 */
+        .person-name { font-size: 14px; font-weight: 700; color: #334155; }
 
-        /* [수정] 근무조 진한 컬러 배지 */
-        .shift-badge {
-            font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px; color: white;
-        }
+        /* 모달 스타일 */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; width: 100%; max-width: 320px; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 
-        .fab { 
-            position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; 
-            background: #1e293b; color: white; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 150;
-        }
-
+        .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: #1e293b; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 150; cursor: pointer; }
         .dot-container { display: flex; gap: 2px; justify-content: center; height: 6px; }
         .v-dot { width: 5px; height: 5px; border-radius: 50%; }
         .dot-sung { background-color: #a855f7; } 
@@ -64,7 +58,7 @@
             <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2" onclick="adminClick()">
                     <span class="text-xl">📅</span>
-                    <h1 id="appTitle" class="text-lg font-black text-slate-800">로딩 중...</h1>
+                    <h1 id="appTitle" class="text-lg font-black text-slate-800">성의교정 근무달력</h1>
                 </div>
                 <div id="dbStatus" class="text-[8px] font-bold text-slate-400">● 연결됨</div>
             </div>
@@ -77,7 +71,6 @@
                 <select id="shiftSelect" class="text-xs h-10 bg-slate-100 rounded-lg font-bold border border-slate-200 px-2" onchange="render()"></select>
             </div>
         </header>
-
         <div id="calendarBody" class="calendar-grid rounded-xl shadow-lg overflow-hidden border border-gray-200"></div>
     </div>
 
@@ -92,6 +85,14 @@
             </div>
         </div>
         <div id="listContent" class="p-3 flex-1 overflow-y-auto"></div>
+    </div>
+
+    <div id="commonModal" class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div id="modalHeader" class="bg-slate-800 p-3 text-white font-bold text-center text-sm"></div>
+            <div id="modalBody" class="p-4 space-y-2 max-h-[50vh] overflow-y-auto"></div>
+            <button onclick="closeModal()" class="w-full p-3 bg-gray-50 font-bold border-t text-sm">닫기</button>
+        </div>
     </div>
 
     <script>
@@ -109,7 +110,6 @@
         let settings = JSON.parse(localStorage.getItem('cal_settings')) || {
             title: "성의교정 근무달력", adminPw: "1234", baseDate: "2026/03/09",
             shifts: ['C', 'A', 'B'],
-            // 조별 컬러 설정 (연한색, 진한색)
             colors: { C: ['#eff6ff', '#3b82f6'], A: ['#fffbeb', '#f59e0b'], B: ['#fef2f2', '#ef4444'] }
         };
 
@@ -121,7 +121,7 @@
             document.getElementById('appTitle').textContent = settings.title;
             const select = document.getElementById('shiftSelect');
             select.innerHTML = '<option value="none">강조 없음</option>';
-            settings.shifts.forEach(s => { select.innerHTML += `<option value="${s}">${s}조</option>`; });
+            settings.shifts.forEach(s => { select.innerHTML += `<option value="${s}">${s}조 강조</option>`; });
             db.collection("vocation_app").doc("data").onSnapshot(doc => {
                 if(doc.exists) { staffData = doc.data().staff || []; vData = doc.data().vocation || {}; render(); }
             });
@@ -137,6 +137,7 @@
         function renderCalendar(mKey) {
             const container = document.getElementById('calendarBody');
             container.innerHTML = '<div class="grid grid-cols-7 text-center font-bold text-[10px] py-2 bg-slate-50 border-b text-slate-400 col-span-7"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>';
+            
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
             const base = new Date(settings.baseDate);
@@ -154,14 +155,23 @@
 
                 const isToday = curr.getTime() === today.getTime();
                 const cell = document.createElement('div');
-                cell.className = `calendar-cell ${isToday ? 'ring-2 ring-inset ring-red-500 z-10' : ''}`;
+                cell.className = `calendar-cell ${isToday ? 'is-today' : ''}`;
+                
+                // 조별 투톤 하이라이트 적용
+                if (targetShift === sName) {
+                    cell.classList.add('cell-highlighted');
+                    cell.style.backgroundColor = sCol[1];
+                }
+
                 cell.innerHTML = `
                     <div class="date-area ${curr.getDay()===0?'sunday':curr.getDay()===6?'saturday':''}">
                         <span>${d}</span><div class="dot-container">${dots}</div>
                     </div>
-                    <div class="shift-area" style="background:${targetShift===sName?sCol[1]:sCol[0]}; color:${targetShift===sName?'#fff':sCol[1]}">${sName}</div>
+                    <div class="shift-area" style="background:${targetShift===sName?'transparent':sCol[0]}; color:${sCol[1]}">${sName}</div>
                 `;
-                if (vList.length > 0) cell.onclick = () => { toggleFloatingList(); document.getElementById('row-'+d)?.scrollIntoView({behavior:'smooth'}); };
+                
+                // 달력 클릭 시 모달 팝업
+                if (vList.length > 0) cell.onclick = () => showModal(`${currentMonth+1}월 ${d}일 연차`, vList);
                 container.appendChild(cell);
             }
         }
@@ -180,32 +190,27 @@
                 const {vList} = getDayVocation(mKey, d);
                 if (vList.length === 0) continue;
 
-                // 성의회관 우선 정렬
-                vList.sort((a, b) => a.g.includes("성의회관") ? -1 : 1);
-
                 const diffDays = Math.round((curr - base) / 86400000); 
                 const sName = settings.shifts[((diffDays % settings.shifts.length) + settings.shifts.length) % settings.shifts.length];
                 const sCol = settings.colors[sName] || ['#fff', '#000'];
 
                 const item = document.createElement('div');
-                item.id = 'row-' + d;
-                item.className = `list-card ${curr.getTime() === today.getTime() ? 'ring-2 ring-red-400 bg-red-50/30' : ''}`;
+                item.className = `list-card ${curr.getTime() === today.getTime() ? 'ring-2 ring-red-400' : ''}`;
                 
                 let html = `
-                    <div class="flex items-center justify-between mb-2.5">
-                        <span class="text-[14px] font-black ${curr.getDay()===0?'text-red-500':curr.getDay()===6?'text-blue-500':'text-slate-600'}">
-                            ${currentMonth+1}/${d} (${['일','월','화','수','목','금','토'][curr.getDay()]})
-                        </span>
-                        <span class="shift-badge" style="background:${sCol[1]}">${sName}조</span>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-black text-slate-700">${currentMonth+1}/${d} (${['일','월','화','수','목','금','토'][curr.getDay()]})</span>
+                        <span class="text-[10px] font-black px-2 py-0.5 rounded text-white" style="background:${sCol[1]}">${sName}조</span>
                     </div>
-                    <div class="v-row">
+                    <div class="flex flex-wrap gap-y-2">
                 `;
 
                 vList.forEach(v => {
+                    const bClass = v.g.includes("성의") ? "bg-sung" : "bg-omni";
                     html += `
-                        <div class="v-badge" style="color:${sCol[1]}; background:${sCol[0]}">
-                            <span class="v-bname">${v.g}</span>
-                            <span>${v.name}</span>
+                        <div class="flex items-center w-full">
+                            <span class="building-badge ${bClass}">${v.g}</span>
+                            <span class="person-name">${v.name}</span>
                         </div>
                     `;
                 });
@@ -221,9 +226,7 @@
                 if (monthV[name].split(',').map(v=>v.trim()).includes(String(day))) {
                     const info = staffData.find(s => s.n === name);
                     if(info) {
-                        // 명칭 풀네임 처리
-                        let buildingName = info.g.includes("성의") ? "성의회관" : (info.g.includes("옴니") ? "옴니버스파크" : info.g);
-                        vList.push({ name, g: buildingName, s: info.s });
+                        vList.push({ name, g: info.g.includes("성의") ? "성의회관" : "옴니버스파크", s: info.s });
                         if(info.g.includes("성의")) hasSung = true;
                         else if(info.g.includes("옴니")) hasOmni = true;
                     }
@@ -234,12 +237,19 @@
             return { vList, dots };
         }
 
-        function toggleFloatingList() { document.getElementById('floatingList').classList.toggle('active'); }
-        function toggleHidePast() { 
-            hidePast = !hidePast; 
-            document.getElementById('togglePast').textContent = hidePast ? "전체보기" : "오늘 이후만 보기";
-            render(); 
+        function showModal(title, list) {
+            document.getElementById('modalHeader').textContent = title;
+            document.getElementById('modalBody').innerHTML = list.map(item => `
+                <div class="p-3 bg-slate-50 rounded-lg border flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500">${item.g}</span>
+                    <span class="text-slate-800 font-black">${item.s} ${item.name}</span>
+                </div>`).join('');
+            document.getElementById('commonModal').classList.add('active');
         }
+
+        function closeModal() { document.getElementById('commonModal').classList.remove('active'); }
+        function toggleFloatingList() { document.getElementById('floatingList').classList.toggle('active'); }
+        function toggleHidePast() { hidePast = !hidePast; document.getElementById('togglePast').textContent = hidePast ? "전체보기" : "오늘 이후만 보기"; render(); }
         function changeMonth(v) { currentMonth += v; if(currentMonth<0){currentMonth=11;currentYear--;} else if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
         
         let clickCount = 0;
