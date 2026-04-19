@@ -13,11 +13,11 @@
         
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; background: white; }
         
-        /* [수정] 셀 높이 약간 높임 (1.35 -> 1.45) */
-        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; aspect-ratio: 1 / 1.45; cursor: pointer; }
+        /* [수정] 셀 높이 15% 추가 확대 (1.45 -> 1.7) */
+        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; aspect-ratio: 1 / 1.7; cursor: pointer; }
         
         .date-area { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; position: relative; }
-        .shift-area { flex: 1.4; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; z-index: 5; }
+        .shift-area { flex: 1.5; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 19px; z-index: 5; }
         
         .cell-highlighted .date-area { background-color: rgba(255,255,255,0.7); }
         .cell-highlighted .shift-area { color: white !important; }
@@ -25,7 +25,7 @@
         .is-today { border: 3px solid #ef4444 !important; z-index: 20; }
         .is-today::after { content: 'TODAY'; position: absolute; top: -1px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; font-size: 8px; font-weight: 900; padding: 1px 4px; border-radius: 0 0 4px 4px; }
         
-        .v-dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; bottom: 4px; z-index: 30; }
+        .v-dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; bottom: 6px; z-index: 30; }
         .dot-sung { left: 6px; background-color: #a855f7; } 
         .dot-omni { right: 6px; background-color: #f97316; } 
         .dot-etc { left: 50%; transform: translateX(-50%); background-color: #14b8a6; } 
@@ -50,15 +50,15 @@
                 <div id="dbStatus" class="text-[9px] font-bold text-slate-400 flex-shrink-0">연결 중...</div>
             </div>
             
-            <!-- [수정] 상단 컨트롤 바: 넘침 방지 및 텍스트 최소화 -->
+            <!-- [수정] 상단 컨트롤 바: 월 선택(왼쪽), 강조 드롭다운(오른쪽) -->
             <div class="flex items-center gap-2">
-                <select id="shiftSelect" class="text-xs p-2 bg-slate-100 text-gray-700 rounded-lg font-bold outline-none border border-slate-200 flex-1 min-w-[85px]" onchange="render()"></select>
-                
                 <div class="flex items-center bg-white border rounded-lg h-9 flex-shrink-0">
                     <button onclick="changeMonth(-1)" class="px-3 font-bold text-slate-400 text-lg">＜</button>
                     <span id="monthTitle" class="text-[14px] font-black text-slate-700 min-w-[80px] text-center"></span>
                     <button onclick="changeMonth(1)" class="px-3 font-bold text-slate-400 text-lg">＞</button>
                 </div>
+
+                <select id="shiftSelect" class="text-xs p-2 bg-slate-100 text-gray-700 rounded-lg font-bold outline-none border border-slate-200 flex-1 min-w-[85px] text-center" onchange="render()"></select>
             </div>
         </header>
 
@@ -152,7 +152,6 @@
         function init() {
             document.getElementById('appTitle').textContent = settings.title;
             const select = document.getElementById('shiftSelect');
-            // [수정] 메뉴 텍스트 최소화
             select.innerHTML = '<option value="none">강조 없음</option>';
             settings.shifts.forEach(s => { select.innerHTML += `<option value="${s}">${s}조</option>`; });
             
