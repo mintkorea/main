@@ -15,7 +15,11 @@
         .day-sat { color: #3B82F6 !important; } 
         .bu-chip { transition: all 0.2s; border: 1.5px solid #e2e8f0; cursor: pointer; background: white; white-space: nowrap; }
         .bu-chip.active { background-color: #1E3A5F; color: white; border-color: #1E3A5F; font-weight: 800; }
-        .rental-card { border: 1.2px solid #e2e8f0; background: white; border-radius: 0.75rem; }
+        
+        /* 카드 스타일 및 터치 효과 */
+        .rental-card { border: 1.2px solid #e2e8f0; background: white; border-radius: 0.75rem; cursor: zoom-in; transition: transform 0.1s; }
+        .rental-card:active { transform: scale(0.97); }
+        
         .status-badge { font-weight: 800; padding: 1px 6px; border-radius: 4px; font-size: 10px; border-width: 1px; }
         .type-header { font-size: 11px; font-weight: 900; display: flex; align-items: center; gap: 4px; margin-bottom: 6px; margin-left: 4px; }
         .empty-box { border: 1.5px dashed #cbd5e1; border-radius: 0.75rem; padding: 1.25rem; text-align: center; color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 1rem; background-color: #ffffff; }
@@ -27,28 +31,34 @@
         .ctrl-action { color: #1E3A5F; border-color: #1E3A5F; cursor: pointer; }
         .flatpickr-input-custom { background-color: white; border: 2px solid white; border-radius: 1rem; height: 3.2rem; width: 100%; max-width: 260px; text-align: center; font-weight: 900; font-size: 1.125rem; color: #1E3A5F; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; }
         
-        /* 하단 플로팅 바 PC 대응 수정 */
+        /* 하단 플로팅 바 */
         .nav-bar { 
-            position: fixed; 
-            bottom: 0; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 100%;
-            max-width: 42rem; /* Tailwind의 max-w-2xl과 동일 */
-            height: 60px; 
-            background: rgba(255, 255, 255, 0.95); 
-            backdrop-filter: blur(8px);
-            border-top: 1px solid #e2e8f0; 
-            display: flex; 
-            z-index: 100; 
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); 
+            width: 100%; max-width: 42rem; height: 60px; 
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px);
+            border-top: 1px solid #e2e8f0; display: flex; z-index: 100; 
+            padding-bottom: env(safe-area-inset-bottom); padding-left: 0.5rem; padding-right: 0.5rem;
         }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
         .nav-label { font-size: 10px; font-weight: 900; color: #64748b; }
         .nav-label.active { color: #1E3A5F; }
         .nav-icon { font-size: 16px; margin-bottom: -2px; }
+
+        /* 돋보기 모달 스타일 */
+        #modalOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 2000; padding: 20px;
+        }
+        .modal-content {
+            width: 100%; max-width: 400px;
+            animation: zoomIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body class="text-slate-800 pb-24">
@@ -88,6 +98,11 @@
             <div id="loading" class="text-center py-10 text-slate-400 font-bold text-xs">데이터 로드 중...</div>
             <div id="listArea"></div>
         </div>
+    </div>
+
+    <div id="modalOverlay" onclick="closeModal()">
+        <div id="modalBody" class="modal-content" onclick="event.stopPropagation()">
+            </div>
     </div>
 
     <nav class="nav-bar shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
@@ -219,9 +234,10 @@
             });
         }
 
+        // 카드 생성 시 클릭 이벤트 추가
         function createCard(r, isPeriodic) {
             const statusColor = r.status === '확정' || r.status === '승인' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-slate-50 text-slate-500 border-slate-100';
-            return `<div class="rental-card p-3 mb-2 shadow-sm border-l-[4px] ${!isPeriodic ? 'border-l-blue-400' : 'border-l-purple-400'}">
+            return `<div class="rental-card p-3 mb-2 shadow-sm border-l-[4px] ${!isPeriodic ? 'border-l-blue-400' : 'border-l-purple-400'}" onclick="openModal(this)">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-[12px] font-black text-slate-700 tracking-tight">📍 ${r.place}</span>
                         <span class="text-[10px] font-bold text-red-500 italic">🕒 ${r.time}</span>
@@ -236,6 +252,27 @@
                         <span class="text-[10px] font-bold text-slate-300 tracking-tighter">👥 ${r.people}명</span>
                     </div>
                 </div>`;
+        }
+
+        // 돋보기 모달 열기
+        function openModal(el) {
+            const modal = document.getElementById('modalOverlay');
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = el.outerHTML;
+            // 모달 안의 카드에서 클릭 이벤트 제거 (중복 방지) 및 스타일 수정
+            const clonedCard = modalBody.firstChild;
+            clonedCard.removeAttribute('onclick');
+            clonedCard.style.transform = 'scale(1)';
+            clonedCard.style.boxShadow = '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)';
+            
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 스크롤 잠금
+        }
+
+        // 돋보기 모달 닫기
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.body.style.overflow = 'auto'; // 스크롤 해제
         }
 
         function moveDate(offset) {
