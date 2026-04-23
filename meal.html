@@ -6,6 +6,11 @@
     <title>성의교정 주간식단</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; scroll-behavior: smooth; }
         .tab-transition { transition: all 0.2s ease-in-out; }
@@ -20,7 +25,10 @@
         .dot-sync { background-color: #F59E0B; box-shadow: 0 0 4px #F59E0B; }
         
         .menu-card-custom { background-color: white; border-radius: 0 0 2rem 2rem; border-top-width: 7px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-style: solid; }
-        #hiddenDatePicker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        
+        /* [수정] 인덱스와 동일한 투명 트리거 스타일 */
+        .date-trigger-wrap { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+        #dateDisplay { z-index: 1; }
         
         .btn-nav-custom { height: 32px; display: flex; align-items: center; justify-content: center; white-space: nowrap !important; font-size: 11px; font-weight: 900; }
     </style>
@@ -32,9 +40,8 @@
                 <h1 class="text-lg font-black text-[#1E3A5F] tracking-tighter">성의교정 주간식단</h1>
                 <span id="shiftBadge" class="text-white text-[10px] px-2 py-0.5 rounded-md font-black shadow-sm tracking-tight">--</span>
             </div>
-            <div class="relative flex items-center">
-                <span id="dateDisplay" class="font-black text-slate-600 text-xl tracking-tight cursor-pointer">날짜 로딩...</span>
-                <input type="date" id="hiddenDatePicker" onchange="syncDateInput(this)">
+            <div class="date-trigger-wrap" id="calendarTrigger">
+                <span id="dateDisplay" class="font-black text-slate-600 text-xl tracking-tight">날짜 로딩...</span>
             </div>
         </div>
 
@@ -80,16 +87,14 @@
         let allData = {}; 
         let currentDate = new Date(); 
         let activeTab = "중식";
+        let fp; // [추가] Flatpickr 인스턴스 저장용
 
-        // [추가] URL 파라미터에서 날짜 읽어오기
         function initDateFromURL() {
             const params = new URLSearchParams(window.location.search);
             const dateParam = params.get('date');
             if (dateParam) {
                 const parsedDate = new Date(dateParam);
-                if (!isNaN(parsedDate)) {
-                    currentDate = parsedDate;
-                }
+                if (!isNaN(parsedDate)) { currentDate = parsedDate; }
             }
         }
 
@@ -115,9 +120,7 @@
                 txt.innerText = "ON(SYNCED)";
                 txt.className = "text-[9px] font-black text-emerald-500 tracking-tight";
                 updateUI(); 
-            } catch (e) {
-                console.error("Data load failed", e);
-            }
+            } catch (e) { console.error("Data load failed", e); }
         }
 
         function updateUI() {
@@ -125,17 +128,18 @@
             const weekIdx = currentDate.getDay();
             const weekNames = ['일', '월', '화', '수', '목', '금', '토'];
             
+            // 날짜 텍스트 업데이트
             document.getElementById('dateDisplay').innerHTML = `${y}.${String(m).padStart(2,'0')}.${String(d).padStart(2,'0')} <span class="${weekIdx===0?'day-sun':(weekIdx===6?'day-sat':'')}">(${weekNames[weekIdx]})</span>`;
-            document.getElementById('hiddenDatePicker').value = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             
-            // 근무조 계산
+            // [수정] Flatpickr 날짜 동기화
+            if(fp) fp.setDate(currentDate, false);
+            
             const targetDate = new Date(currentDate); targetDate.setHours(0,0,0,0);
             const baseDate = new Date(shiftConfig.baseDate); baseDate.setHours(0,0,0,0);
             const diffDays = Math.floor((targetDate - baseDate) / 86400000);
             const shift = shiftConfig.pattern[((diffDays % 3) + 3) % 3];
             const badge = document.getElementById('shiftBadge'); badge.innerText = `${shift.name}조 근무`; badge.style.backgroundColor = shift.color;
 
-            // 탭 생성
             const tabsContainer = document.getElementById('tabs-container'); tabsContainer.innerHTML = '';
             MEAL_ORDER.forEach(meal => {
                 const isActive = meal === activeTab; const meta = mealMeta[meal];
@@ -144,7 +148,6 @@
                 btn.onclick = () => { activeTab = meal; updateUI(); }; tabsContainer.appendChild(btn);
             });
 
-            // 데이터 매칭
             const key = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const dayData = allData[key] || allData[`${y}-${m}-${d}`] || null;
             let info = null; 
@@ -192,14 +195,26 @@
 
         function changeDate(n) { currentDate.setDate(currentDate.getDate() + n); updateUI(); }
         function goToday() { currentDate = new Date(); activeTab = autoMeal(); updateUI(); }
-        function syncDateInput(input) { if (input.value) { currentDate = new Date(input.value); updateUI(); } }
         function autoMeal() { const h = new Date().getHours(); if (h < 9) return "조식"; if (h < 14) return "중식"; return "석식"; }
         
         window.onload = () => { 
-            initDateFromURL(); // 1. URL에서 날짜 먼저 파악
-            if (!window.location.search.includes('date')) {
-                activeTab = autoMeal(); // 직접 들어온 경우만 시간대별 탭 자동 설정
-            }
+            initDateFromURL();
+            if (!window.location.search.includes('date')) { activeTab = autoMeal(); }
+            
+            // [수정] 인덱스와 동일한 Flatpickr 초기화
+            fp = flatpickr("#calendarTrigger", {
+                locale: "ko",
+                dateFormat: "Y-m-d",
+                defaultDate: currentDate,
+                disableMobile: true, // 인덱스 디자인 유지를 위해 필수
+                onChange: (dates) => {
+                    if(dates.length) {
+                        currentDate = dates[0];
+                        updateUI();
+                    }
+                }
+            });
+
             loadData(); 
         };
         setInterval(updateStatusMsg, 60000);
