@@ -15,7 +15,7 @@
         .day-sat { color: #3B82F6 !important; } 
         .bu-chip { transition: all 0.2s; border: 1.5px solid #e2e8f0; cursor: pointer; background: white; white-space: nowrap; }
         .bu-chip.active { background-color: #1E3A5F; color: white; border-color: #1E3A5F; font-weight: 800; }
-        .rental-card { border: 1.2px solid #e2e8f0; background: white; border-radius: 0.75rem; cursor: pointer; } /* cursor 추가 */
+        .rental-card { border: 1.2px solid #e2e8f0; background: white; border-radius: 0.75rem; cursor: pointer; }
         .status-badge { font-weight: 800; padding: 1px 6px; border-radius: 4px; font-size: 10px; border-width: 1px; }
         .type-header { font-size: 11px; font-weight: 900; display: flex; align-items: center; gap: 4px; margin-bottom: 6px; margin-left: 4px; }
         .empty-box { border: 1.5px dashed #cbd5e1; border-radius: 0.75rem; padding: 1.25rem; text-align: center; color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 1rem; background-color: #ffffff; }
@@ -38,7 +38,6 @@
         .nav-label.active { color: #1E3A5F; }
         .nav-icon { font-size: 16px; margin-bottom: -2px; }
 
-        /* 모달 스타일 추가 */
         #modalOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
         .modal-box { background: white; width: 100%; max-width: 400px; border-radius: 1.25rem; padding: 1.5rem; border-left: 8px solid #1E3A5F; }
         .m-title { font-size: 1.6rem; font-weight: 900; color: #0F172A; margin: 10px 0; line-height: 1.2; }
@@ -110,6 +109,18 @@
         let currentDate = new Date();
         let fp;
 
+        // [추가] URL 파라미터에서 날짜를 읽어오는 로직
+        function initDateFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const dateParam = params.get('date');
+            if (dateParam) {
+                const parsedDate = new Date(dateParam);
+                if (!isNaN(parsedDate)) {
+                    currentDate = parsedDate;
+                }
+            }
+        }
+
         async function initApp() {
             const backup = localStorage.getItem("rental_db_cache");
             if (backup) {
@@ -149,12 +160,15 @@
             const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
             const dd = String(currentDate.getDate()).padStart(2, '0');
             const dateStr = `${yyyy}-${mm}-${dd}`;
+            
             if(fp) fp.setDate(currentDate, false);
+            
             const pickerInput = document.getElementById('datePicker');
             pickerInput.classList.remove('day-sun', 'day-sat');
             const day = currentDate.getDay();
             if(day === 0 || HOLIDAYS.includes(dateStr)) pickerInput.classList.add('day-sun');
             else if(day === 6) pickerInput.classList.add('day-sat');
+            
             const baseDate = new Date('2026-03-09').setHours(0,0,0,0);
             const targetDate = new Date(dateStr).setHours(0,0,0,0);
             const diff = Math.round((targetDate - baseDate) / 86400000);
@@ -162,6 +176,7 @@
             const shift = patterns[((diff % 3) + 3) % 3];
             document.getElementById('shiftBadge').innerText = `${shift.n}조 근무`;
             document.getElementById('shiftBadge').style.backgroundColor = shift.c;
+            
             renderRental(dateStr);
         }
 
@@ -191,7 +206,6 @@
             });
         }
 
-        // 원본 디자인 100% 유지 + onclick 추가
         function createCard(r, isPeriodic) {
             const statusColor = r.status === '확정' || r.status === '승인' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-slate-50 text-slate-500 border-slate-100';
             return `<div class="rental-card p-3 mb-2 shadow-sm border-l-[4px] ${!isPeriodic ? 'border-l-blue-400' : 'border-l-purple-400'}" onclick='openModal(${JSON.stringify(r)})'>
@@ -211,7 +225,6 @@
                 </div>`;
         }
 
-        // 모달 관련 함수
         function openModal(r) {
             const badgeCol = r.status === '확정' || r.status === '승인' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-slate-50 text-slate-500 border-slate-100';
             document.getElementById('modalBadgeArea').innerHTML = `<span class="status-badge ${badgeCol} text-xs py-1 px-2">${r.status}</span><span class="font-bold text-slate-400">👥 ${r.people}명</span>`;
@@ -225,7 +238,9 @@
         function moveDate(offset) { if (offset === 0) currentDate = new Date(); else currentDate.setDate(currentDate.getDate() + offset); updateDisplay(); window.scrollTo({top: 0, behavior: 'smooth'}); }
 
         window.onload = () => {
-            fp = flatpickr("#datePicker", { locale: "ko", dateFormat: "Y.m.d (D)", defaultDate: new Date(), disableMobile: "true", onChange: (sd) => { if(sd.length > 0) { currentDate = sd[0]; updateDisplay(); } } });
+            initDateFromURL(); // 1. URL 파라미터 날짜 우선 적용
+            fp = flatpickr("#datePicker", { locale: "ko", dateFormat: "Y.m.d (D)", defaultDate: currentDate, disableMobile: "true", onChange: (sd) => { if(sd.length > 0) { currentDate = sd[0]; updateDisplay(); } } });
+            
             const container = document.getElementById('buContainer');
             BUILDINGS.forEach(bu => {
                 const chip = document.createElement('div');
