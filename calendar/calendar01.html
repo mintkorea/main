@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>성의교정 통합 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        /* 캘린더 그리드 스타일[cite: 1, 2] */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; background: white; width: 100%; }
+        .calendar-cell { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; cursor: pointer; min-height: 70px; }
+        
+        /* 날짜 영역 높이 조절 (36px)[cite: 3] */
+        .date-area { height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; position: relative; }
+        .shift-area { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; z-index: 5; min-height: 40px; }
+        
+        .cell-highlighted { color: white !important; }
+        .is-today { border: 2px solid #ef4444 !important; z-index: 20; }
+        .is-today::after { content: 'TODAY'; position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 0px 3px; border-radius: 0 0 3px 3px; }
+        
+        .sunday { color: #ef4444; }
+        .saturday { color: #3b82f6; }
+
+        .dot-container { display: flex; gap: 2px; justify-content: center; align-items: center; height: 6px; margin-top: 1px; }
+        .v-dot { width: 5px; height: 5px; border-radius: 50%; }
+        .dot-sung { background-color: #a855f7; } 
+        .dot-omni { background-color: #f97316; } 
+        .dot-etc { background-color: #14b8a6; } 
+
+        /* 6개월 모아보기 반응형[cite: 2] */
+        .multi-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; margin-top: 20px; }
+        @media (max-width: 1024px) { .multi-container { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .multi-container { grid-template-columns: 1fr; } }
+
+        /* 모달 스타일 (Source 3 디자인 적용)[cite: 3] */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; width: 100%; max-width: 320px; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .admin-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; margin-top: 4px; }
+        
+        /* 근무조 설정 행 */
+        .shift-config-row { display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 8px; border-radius: 8px; margin-bottom: 6px; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body class="p-2 md:p-4">
+    <div id="appContainer" class="max-w-md mx-auto transition-all duration-300">
+        <header class="bg-white rounded-xl shadow-sm border border-gray-200 mb-3 p-3">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="adminClick()">
+                    <span class="text-xl">📅</span>
+                    <h1 id="appTitle" class="text-lg font-black text-slate-800">로딩 중...</h1>
+                </div>
+                <div id="dbStatus" class="text-[8px] font-bold text-slate-400">● 연결됨</div>
+            </div>
+            
+            <div class="flex items-center gap-2 w-full">
+                <div class="flex items-center bg-white border rounded-lg h-10 flex-1">
+                    <button onclick="changeMonth(-1)" class="px-4 font-bold text-slate-400 text-lg">＜</button>
+                    <span id="monthTitle" class="text-sm font-black text-slate-700 flex-1 text-center"></span>
+                    <button onclick="changeMonth(1)" class="px-4 font-bold text-slate-400 text-lg">＞</button>
+                </div>
+                <select id="shiftSelect" class="text-xs h-10 bg-slate-100 text-gray-700 rounded-lg font-bold border border-slate-200 flex-1 text-center outline-none" onchange="render()"></select>
+            </div>
+        </header>
+
+        <div id="singleView" class="rounded-xl shadow-lg overflow-hidden border border-gray-200 bg-white">
+            <div id="calendarBody"></div>
+        </div>
+
+        <div id="multiView" class="hidden multi-container"></div>
+
+        <!-- 하단 버튼: 배경색을 #3498db (Source 3 모달 타이틀 색상)로 변경 -->
+        <div class="flex justify-center mt-6 mb-10">
+            <button id="viewModeBtn" onclick="toggleViewMode()" class="px-8 py-3 bg-[#3498db] text-white rounded-full text-sm font-black shadow-lg hover:brightness-110 transition-all active:scale-95">
+                6개월 모아보기
+            </button>
+        </div>
+    </div>
+
+    <!-- 연차 정보 모달 (Source 3 스타일 반영)[cite: 3] -->
+    <div id="commonModal" class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <!-- 헤더 색상 #3498db 적용[cite: 3] -->
+            <div id="modalHeader" class="bg-[#3498db] p-3 text-white font-bold text-center text-sm"></div>
+            <!-- 내부 아이템 패딩 및 배경색 조정[cite: 3] -->
+            <div id="modalBody" class="p-4 space-y-2 max-h-[50vh] overflow-y-auto"></div>
+            <button onclick="closeModal()" class="w-full p-3 bg-gray-50 font-bold border-t text-sm text-slate-600">닫기</button>
+        </div>
+    </div>
+
+    <!-- 관리자 설정 모달[cite: 1, 2] -->
+    <div id="adminModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="bg-slate-800 p-3 text-white font-bold text-center text-xs">환경 설정</div>
+            <div class="p-4 space-y-3 text-[11px] overflow-y-auto max-h-[70vh]">
+                <div><label class="font-bold">앱 타이틀</label><input id="setAppTitle" class="admin-input"></div>
+                <div><label class="font-bold">관리자 비번</label><input id="setAdminPw" type="password" class="admin-input"></div>
+                <div><label class="font-bold">기준일 (YYYY-MM-DD)</label><input id="setBaseDate" type="date" class="admin-input"></div>
+                
+                <div class="border-t pt-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="font-bold text-blue-600">근무조 패턴 설정</label>
+                        <button onclick="addShiftRow()" class="px-2 py-1 bg-blue-600 text-white rounded text-[10px]">+ 추가</button>
+                    </div>
+                    <div id="shiftConfigList"></div>
+                </div>
+            </div>
+            <div class="flex border-t">
+                <button onclick="closeAdmin()" class="flex-1 p-3 bg-gray-100 font-bold">취소</button>
+                <button onclick="saveSettings()" class="flex-1 p-3 bg-blue-600 text-white font-bold">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGDUudF49hnXwU55er7joyeSLEPrme1GU",
+            authDomain: "catholic-security-system.firebaseapp.com",
+            projectId: "catholic-security-system",
+            storageBucket: "catholic-security-system.firebasestorage.app",
+            messagingSenderId: "978946205343",
+            appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let settings = JSON.parse(localStorage.getItem('cal_settings')) || {
+            title: "성의교정 근무달력", adminPw: "1234", baseDate: "2026-03-09",
+            pattern: [
+                { name: 'C', bg: '#dbeafe', fg: '#3b82f6' },
+                { name: 'A', bg: '#fef3c7', fg: '#f59e0b' },
+                { name: 'B', bg: '#fee2e2', fg: '#ef4444' }
+            ]
+        };
+
+        let staffData = [], vData = {}, clickCount = 0, viewMode = 'single';
+        const today = new Date(); today.setHours(0,0,0,0);
+        let currentYear = today.getFullYear(), currentMonth = today.getMonth();
+
+        function adminClick() {
+            clickCount++;
+            if(clickCount >= 5) {
+                const pw = prompt("관리자 비번을 입력하세요.");
+                if(pw === settings.adminPw) openAdmin();
+                clickCount = 0;
+            }
+            setTimeout(() => { clickCount = 0; }, 2000);
+        }
+
+        function addShiftRow(data = { name: '', bg: '#ffffff', fg: '#000000' }) {
+            const container = document.getElementById('shiftConfigList');
+            const row = document.createElement('div');
+            row.className = 'shift-config-row';
+            row.innerHTML = `
+                <input type="text" placeholder="조" class="w-12 p-1 border rounded text-center font-bold" value="${data.name}">
+                <div class="flex flex-col items-center flex-1">
+                    <span class="text-[8px]">배경</span>
+                    <input type="color" class="w-full h-6 border-0 p-0 cursor-pointer" value="${data.bg}">
+                </div>
+                <div class="flex flex-col items-center flex-1">
+                    <span class="text-[8px]">강조</span>
+                    <input type="color" class="w-full h-6 border-0 p-0 cursor-pointer" value="${data.fg}">
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-red-500 font-bold px-1">✕</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function openAdmin() {
+            document.getElementById('setAppTitle').value = settings.title;
+            document.getElementById('setAdminPw').value = settings.adminPw;
+            document.getElementById('setBaseDate').value = settings.baseDate;
+            const list = document.getElementById('shiftConfigList');
+            list.innerHTML = '';
+            settings.pattern.forEach(p => addShiftRow(p));
+            document.getElementById('adminModal').classList.add('active');
+        }
+
+        function saveSettings() {
+            const rows = document.querySelectorAll('.shift-config-row');
+            const newPattern = Array.from(rows).map(row => ({
+                name: row.querySelector('input[type="text"]').value.toUpperCase(),
+                bg: row.querySelectorAll('input[type="color"]')[0].value,
+                fg: row.querySelectorAll('input[type="color"]')[1].value
+            })).filter(p => p.name !== '');
+
+            settings = {
+                title: document.getElementById('setAppTitle').value,
+                adminPw: document.getElementById('setAdminPw').value,
+                baseDate: document.getElementById('setBaseDate').value,
+                pattern: newPattern
+            };
+            localStorage.setItem('cal_settings', JSON.stringify(settings));
+            location.reload();
+        }
+
+        function toggleViewMode() {
+            viewMode = (viewMode === 'single') ? 'multi' : 'single';
+            const btn = document.getElementById('viewModeBtn');
+            const app = document.getElementById('appContainer');
+            if(viewMode === 'multi') {
+                btn.textContent = "단일 보기로 돌아가기";
+                app.style.maxWidth = "1200px";
+                document.getElementById('singleView').classList.add('hidden');
+                document.getElementById('multiView').classList.remove('hidden');
+            } else {
+                btn.textContent = "6개월 모아보기";
+                app.style.maxWidth = "448px";
+                document.getElementById('singleView').classList.remove('hidden');
+                document.getElementById('multiView').classList.add('hidden');
+            }
+            render();
+            window.scrollTo(0,0);
+        }
+
+        function createGrid(year, month) {
+            const grid = document.createElement('div');
+            grid.className = 'calendar-grid';
+            ['일','월','화','수','목','금','토'].forEach((day, i) => {
+                const h = document.createElement('div');
+                h.className = `text-center font-bold text-[10px] py-2 bg-slate-50 border-b text-slate-400 ${i===0?'sunday':i===6?'saturday':''}`;
+                h.textContent = day;
+                grid.appendChild(h);
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            const base = new Date(settings.baseDate); base.setHours(0,0,0,0);
+            const targetShift = document.getElementById('shiftSelect').value;
+            const mKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+            for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), { className: 'calendar-cell bg-slate-50/50' }));
+
+            for (let d = 1; d <= lastDate; d++) {
+                const curr = new Date(year, month, d); curr.setHours(0,0,0,0);
+                const diffDays = Math.round((curr - base) / 86400000); 
+                const pIdx = ((diffDays % settings.pattern.length) + settings.pattern.length) % settings.pattern.length;
+                const shift = settings.pattern[pIdx];
+
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell' + (curr.getTime() === today.getTime() ? ' is-today' : '');
+                
+                let vList = [], hasSung = false, hasOmni = false, hasEtc = false;
+                const monthV = vData[mKey] || {};
+                for (let name in monthV) {
+                    if (monthV[name].split(',').map(v=>v.trim()).includes(String(d))) {
+                        const info = staffData.find(s => s.n === name);
+                        if(info) {
+                            vList.push({ name, g: info.g, s: info.s });
+                            if(info.g.includes("성의")) hasSung = true;
+                            else if(info.g.includes("옴니")) hasOmni = true;
+                            else hasEtc = true;
+                        }
+                    }
+                }
+
+                const dDiv = document.createElement('div');
+                dDiv.className = `date-area ${curr.getDay()===0?'sunday':curr.getDay()===6?'saturday':''}`;
+                dDiv.innerHTML = `<span>${d}</span><div class="dot-container">${hasSung?'<div class="v-dot dot-sung"></div>':''}${hasOmni?'<div class="v-dot dot-omni"></div>':''}${hasEtc?'<div class="v-dot dot-etc"></div>':''}</div>`;
+
+                const sDiv = document.createElement('div');
+                sDiv.className = 'shift-area';
+                sDiv.textContent = shift.name;
+
+                if (targetShift === shift.name) {
+                    cell.classList.add('cell-highlighted');
+                    cell.style.backgroundColor = shift.fg;
+                } else {
+                    sDiv.style.backgroundColor = shift.bg;
+                    sDiv.style.color = shift.fg;
+                }
+
+                if (vList.length > 0) cell.onclick = () => showVNames(`${month+1}월 ${d}일 연차`, vList);
+                cell.append(dDiv, sDiv);
+                grid.appendChild(cell);
+            }
+            return grid;
+        }
+
+        function render() {
+            document.getElementById('monthTitle').textContent = `${currentYear}년 ${currentMonth + 1}월`;
+            if(viewMode === 'single') {
+                const container = document.getElementById('calendarBody');
+                container.innerHTML = '';
+                container.appendChild(createGrid(currentYear, currentMonth));
+            } else {
+                const multiContainer = document.getElementById('multiView');
+                multiContainer.innerHTML = '';
+                for(let i=0; i<6; i++) {
+                    const date = new Date(currentYear, currentMonth + i, 1);
+                    const wrapper = document.createElement('div');
+                    wrapper.className = "bg-white rounded-xl shadow-sm border overflow-hidden";
+                    wrapper.innerHTML = `<div class="p-2 bg-slate-50 border-b font-bold text-center text-xs text-slate-600">${date.getFullYear()}년 ${date.getMonth()+1}월</div>`;
+                    wrapper.appendChild(createGrid(date.getFullYear(), date.getMonth()));
+                    multiContainer.appendChild(wrapper);
+                }
+            }
+        }
+
+        // Source 3의 모달 내부 아이템 디자인 적용[cite: 3]
+        function showVNames(title, list) {
+            document.getElementById('modalHeader').textContent = title;
+            document.getElementById('modalBody').innerHTML = list.map(item => `
+                <div class="p-2.5 bg-slate-50 rounded-lg border text-center border-slate-200">
+                    <span class="text-[9px] text-gray-400 block mb-0.5">[${item.g}]</span>
+                    <span class="text-slate-700 font-bold text-xs">${item.s} ${item.name}</span>
+                </div>`).join('');
+            document.getElementById('commonModal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('commonModal').classList.remove('active'); }
+        function closeAdmin() { document.getElementById('adminModal').classList.remove('active'); }
+        function changeMonth(v) { currentMonth += v; if(currentMonth<0){currentMonth=11;currentYear--;} else if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
+        
+        function init() {
+            document.getElementById('appTitle').textContent = settings.title;
+            const select = document.getElementById('shiftSelect');
+            select.innerHTML = '<option value="none">강조 선택</option>';
+            settings.pattern.forEach(p => { select.innerHTML += `<option value="${p.name}">${p.name}조 강조</option>`; });
+            db.collection("vocation_app").doc("data").onSnapshot(doc => {
+                if(doc.exists) { staffData = doc.data().staff || []; vData = doc.data().vocation || {}; render(); }
+            });
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>
