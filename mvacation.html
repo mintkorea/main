@@ -8,57 +8,82 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
         :root { 
-            --bg: #f8f9fa; --border: #eceef0; --blue-main: #3498db;
+            --bg: #f2f2f2; --border: #ccc; --blue-main: #2979ff;
             --orange-hdr: #ffd8a8; --orange-card: #fff4e6; --orange-txt: #d9480f;
             --red-hdr: #ffc9c9; --red-card: #fff5f5; --red-txt: #c92a2a;
             --blue-hdr: #a5d8ff; --blue-card: #e7f5ff; --blue-txt: #1864ab;
-            --gray-hdr: #e9ecef; --gray-card: #f8f9fa;
+            --gray-hdr: #e0e0e0; --gray-card: #fdfdfd;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); padding-bottom: 70px; color: #333; }
-        .header { background: #fff; padding: 10px; text-align: center; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        body { background: var(--bg); padding-bottom: 60px; }
+
+        .header { background: #fff; padding: 8px; text-align: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; gap: 8px; }
         #sync-badge { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
-        #sync-text { font-size: 11px; color: #adb5bd; font-weight: bold; }
-        .app-container { max-width: 800px; margin: 10px auto; padding: 0 8px; }
-        
-        /* [수정] 조별 테이블 및 왼쪽 탭 너비 통일 (60px) */
-        .group-table { display: flex; width: 100%; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.04); margin-bottom: 12px; border: 1px solid var(--border); }
-        .left-header { width: 60px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; writing-mode: vertical-lr; text-orientation: mixed; letter-spacing: 1px; flex-shrink: 0; border-right: 1px solid var(--border); }
-        
-        .right-content { flex-grow: 1; padding: 10px; }
-        .member-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+        #sync-text { font-size: 11px; color: #999; font-weight: bold; }
 
-        /* [수정] 카드 디자인 및 이름 영역 높이 축소 */
-        .person-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-height: 48px; }
-        .person-card.active { border: 2px solid var(--blue-main) !important; box-shadow: 0 0 8px rgba(52, 152, 219, 0.2); }
+        .app-container { max-width: 800px; margin: 5px auto; padding: 0 4px; }
         
-        /* [수정] 텍스트 크기 및 간격 조절 */
-        .pos { font-size: 8px; color: #868e96; font-weight: bold; margin-bottom: 1px; white-space: nowrap; }
-        .name { font-size: 13px; font-weight: 900; color: #212529; line-height: 1.1; }
+        /* [핵심] 유기적으로 연결된 표 디자인 */
+        .group-table { 
+            display: flex; width: 100%; background: #fff; margin-bottom: 4px; 
+            border: 1px solid var(--border); border-collapse: collapse;
+        }
+        
+        /* 왼쪽 탭 크기 고정 및 테두리 */
+        .left-header { 
+            width: 60px; display: flex; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: 13px; writing-mode: vertical-lr; text-orientation: mixed; 
+            flex-shrink: 0; border-right: 1px solid var(--border);
+        }
+        
+        .right-content { flex-grow: 1; padding: 4px; }
+        
+        /* 모든 카드는 동일한 4열 그리드 */
+        .member-grid { 
+            display: grid; grid-template-columns: repeat(4, 1fr); 
+            gap: 2px; /* 여백 최소화 */
+            width: 100%; 
+        }
 
-        /* [수정] 지휘부/반장 중앙 정렬용 스타일 (2개 영역 차지) */
-        .center-card { grid-column: span 2; }
-        .label-card { background: #f1f3f5; border: 1px solid #dee2e6; color: #495057; pointer-events: none; }
+        /* [핵심] 모든 카드 크기 통일 및 이름 높이 최소화 */
+        .person-card { 
+            background: #fff; border: 1px solid #ddd; border-radius: 4px; 
+            padding: 2px 0; display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; cursor: pointer; min-height: 44px;
+        }
+        .person-card.active { border: 2px solid var(--blue-main) !important; background: #fff !important; }
+        
+        .pos { font-size: 8px; color: #888; font-weight: bold; line-height: 1; margin-bottom: 1px; }
+        .name { font-size: 13px; font-weight: 900; color: #000; line-height: 1; padding: 0; }
 
-        .gr-지휘부 .left-header, .gr-반장 .left-header { background: var(--gray-hdr); color: #495057; writing-mode: horizontal-tb; }
+        /* 지휘부 & 반장 스타일 */
+        .gr-지휘부 .left-header, .gr-반장 .left-header { background: var(--gray-hdr); writing-mode: horizontal-tb; }
+        .gr-지휘부 .person-card, .gr-반장 .person-card { background: var(--gray-card); }
+        
+        /* 조별 파스텔톤 */
         .gr-A조 .left-header { background: var(--orange-hdr); color: var(--orange-txt); }
-        .gr-A조 .person-card { background: var(--orange-card); }
+        .gr-A조 .person-card { background: var(--orange-card); border-color: #ffdec0; }
         .gr-B조 .left-header { background: var(--red-hdr); color: var(--red-txt); }
-        .gr-B조 .person-card { background: var(--red-card); }
+        .gr-B조 .person-card { background: var(--red-card); border-color: #ffdadb; }
         .gr-C조 .left-header { background: var(--blue-hdr); color: var(--blue-txt); }
-        .gr-C조 .person-card { background: var(--blue-card); }
-        .empty-card { border: 1px dashed #dee2e6; border-radius: 10px; background: transparent; min-height: 48px; }
+        .gr-C조 .person-card { background: var(--blue-card); border-color: #d0e7ff; }
 
-        /* 하단 탭 및 모달 (기존 유지) */
-        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 55px; background: #fff; display: flex; border-top: 1px solid #eee; }
-        .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #adb5bd; font-size: 10px; font-weight: bold; }
+        /* 건물명 카드 (일반 카드와 동일한 디자인) */
+        .building-card { background: #eee !important; border-color: #bbb !important; pointer-events: none; }
+        .empty-card { border: 1px dashed #ddd; border-radius: 4px; min-height: 44px; }
+
+        /* 하단 탭 */
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 50px; background: #fff; display: flex; border-top: 1px solid var(--border); }
+        .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #bbb; font-size: 10px; font-weight: bold; }
         .tab.active { color: var(--blue-main); }
+
+        /* 모달 */
         #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; }
-        .modal-content { background: #fff; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px 20px 0 0; }
+        .modal-content { background: #fff; width: 100%; max-width: 500px; padding: 20px; border-radius: 15px 15px 0 0; }
         .m-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 15px 0; }
-        .m-input { background: #f8f9fa; padding: 8px; border-radius: 10px; border: 1px solid #eee; text-align: center; }
+        .m-input { background: #f8f9fa; padding: 6px; border-radius: 8px; border: 1px solid #eee; text-align: center; }
         .m-input input { width: 100%; border: none; background: transparent; text-align: center; font-size: 16px; font-weight: bold; color: var(--blue-main); outline: none; }
-        .m-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; font-size: 15px; background: var(--blue-main); color: #fff; }
+        .m-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; background: var(--blue-main); color: #fff; }
     </style>
 </head>
 <body>
@@ -78,8 +103,8 @@
 <div id="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <div id="m-header" style="text-align:center;">
-            <div id="m-pos" style="font-size:11px; color:#868e96; font-weight:bold;"></div>
-            <div id="m-name" style="font-size:18px; font-weight:900; margin-bottom:12px;"></div>
+            <div id="m-pos" style="font-size:11px; color:#888; font-weight:bold;"></div>
+            <div id="m-name" style="font-size:18px; font-weight:900; margin-bottom:10px;"></div>
         </div>
         <div class="m-grid" id="m-grid"></div>
         <button class="m-btn" onclick="save()">저장하기</button>
@@ -105,102 +130,104 @@
 
     const mGrid = document.getElementById('m-grid');
     for(let i=1; i<=12; i++) {
-        mGrid.innerHTML += `<div class="m-input"><label style="font-size:10px; color:#adb5bd; display:block;">${i}월</label><input type="text" id="month-${i}" inputmode="decimal"></div>`;
-    }
-
-    async function autoSetup(badge, text) {
-        const fullList = [
-            {g:"지휘부", p:"보안소장", n:"이규용"}, {g:"지휘부", p:"부소장", n:"박상현"},
-            {g:"반장", p:"보안반장", n:"유정수"}, {g:"반장", p:"보안반장", n:"오제준"},
-            {g:"A조", p:"성의회관", n:"배준용"}, {g:"A조", p:"성의회관", n:"이명구"},
-            {g:"A조", p:"옴니조장", n:"손병휘"}, {g:"A조", p:"옴니대원", n:"권순호"},
-            {g:"A조", p:"의산연", n:"김영중"}, {g:"A조", p:"의산연", n:"김삼동"},
-            {g:"A조", p:"옴니대원", n:"김전식"},
-            {g:"B조", p:"성의회관", n:"심규천"}, {g:"B조", p:"성의회관", n:"임종현"},
-            {g:"B조", p:"옴니조장", n:"황일범"}, {g:"B조", p:"옴니대원", n:"이상길"},
-            {g:"B조", p:"의산연", n:"권영국"}, {g:"B조", p:"의산연", n:"전준수"},
-            {g:"B조", p:"옴니대원", n:"허용"},
-            {g:"C조", p:"성의회관", n:"황재업"}, {g:"C조", p:"성의회관", n:"이태원"},
-            {g:"C조", p:"옴니조장", n:"피재영"}, {g:"C조", p:"옴니대원", n:"남형민"},
-            {g:"C조", p:"의산연", n:"김태언"}, {g:"C조", p:"의산연", n:"이정석"},
-            {g:"C조", p:"옴니대원", n:"강경훈"}
-        ];
-        try {
-            text.innerText = "⚙️ 데이터 복구 중...";
-            await db.collection("vacation_app").doc("data").set({ staff: fullList, vocation: {} }, { merge: true });
-        } catch(e) { console.error(e); }
+        mGrid.innerHTML += `<div class="m-input"><label style="font-size:10px; color:#999; display:block;">${i}월</label><input type="text" id="month-${i}" inputmode="decimal"></div>`;
     }
 
     function init() {
-        db.collection("vacation_app").doc("data").onSnapshot(async doc => {
+        db.collection("vacation_app").doc("data").onSnapshot(doc => {
             const badge = document.getElementById('sync-badge');
             const text = document.getElementById('sync-text');
-            if(!doc.exists || !doc.data().staff || doc.data().staff.length === 0) {
-                await autoSetup(badge, text); return;
+            if(doc.exists) {
+                staffList = doc.data().staff || [];
+                vData = doc.data().vocation || {};
+                render();
+                badge.style.background = "#4caf50"; text.innerText = "● 실시간 연결됨";
             }
-            staffList = doc.data().staff;
-            vData = doc.data().vocation || {};
-            render();
-            badge.style.background = "#51cf66"; text.innerText = "● 실시간 동기화";
         });
     }
 
     function render() {
         const area = document.getElementById('list-area');
         area.innerHTML = '';
-        ["지휘부", "반장", "A조", "B조", "C조"].forEach(gName => {
-            const members = staffList.filter(s => s.g === gName);
-            if(members.length === 0) return;
-
-            const table = document.createElement('div');
-            table.className = `group-table gr-${gName}`;
-            table.innerHTML = `<div class="left-header">${gName}</div><div class="right-content"><div class="member-grid"></div></div>`;
+        
+        // [지휘부 섹션]
+        const leaders = staffList.filter(s => s.g === "지휘부");
+        if(leaders.length > 0) {
+            const table = createTable("지휘부");
             const grid = table.querySelector('.member-grid');
+            grid.appendChild(createCard(leaders[0], "span 2"));
+            grid.appendChild(createCard(leaders[1], "span 2"));
+            area.appendChild(table);
+        }
 
-            if(gName === "지휘부") {
-                // [수정] 소장, 부소장 카드 2개 영역 중앙 배치
-                grid.appendChild(createCard(members[0], "center-card"));
-                grid.appendChild(createCard(members[1], "center-card"));
-            } 
-            else if(gName === "반장") {
-                // [수정] 반장 상단에 성의회관/옴니버스파크 라벨 카드 추가
-                grid.appendChild(createLabelCard("성의회관", "center-card"));
-                grid.appendChild(createLabelCard("옴니버스파크", "center-card"));
-                grid.appendChild(createCard(members[0], "center-card"));
-                grid.appendChild(createCard(members[1], "center-card"));
-            }
-            else {
-                // 일반 조 배치 (4열 좌우 균형)
+        // [건물명 카드 섹션 - 소장과 반장 사이]
+        const midTable = createTable(""); 
+        midTable.style.borderTop = "none";
+        const midGrid = midTable.querySelector('.member-grid');
+        midGrid.appendChild(createBuildingCard("성의회관", "span 2"));
+        midGrid.appendChild(createBuildingCard("옴니버스파크", "span 2"));
+        area.appendChild(midTable);
+
+        // [반장 섹션]
+        const chiefs = staffList.filter(s => s.g === "반장");
+        if(chiefs.length > 0) {
+            const table = createTable("반장");
+            table.style.borderTop = "none";
+            const grid = table.querySelector('.member-grid');
+            grid.appendChild(createCard(chiefs[0], "span 2"));
+            grid.appendChild(createCard(chiefs[1], "span 2"));
+            area.appendChild(table);
+        }
+
+        // [조별 섹션]
+        ["A조", "B조", "C조"].forEach(gName => {
+            const members = staffList.filter(s => s.g === gName);
+            if(members.length > 0) {
+                const table = createTable(gName);
+                const grid = table.querySelector('.member-grid');
                 const leftM = members.filter(s => s.p.includes("성의") || s.p.includes("의산연"));
                 const rightM = members.filter(s => s.p.includes("옴니"));
                 const rows = Math.max(Math.ceil(leftM.length / 2), Math.ceil(rightM.length / 2));
                 for(let r=0; r<rows; r++) {
-                    for(let i=0; i<2; i++) grid.appendChild(leftM[r*2+i] ? createCard(leftM[r*2+i]) : createEmptyCard());
-                    for(let i=0; i<2; i++) grid.appendChild(rightM[r*2+i] ? createCard(rightM[r*2+i]) : createEmptyCard());
+                    grid.appendChild(leftM[r*2] ? createCard(leftM[r*2]) : createEmpty());
+                    grid.appendChild(leftM[r*2+1] ? createCard(leftM[r*2+1]) : createEmpty());
+                    grid.appendChild(rightM[r*2] ? createCard(rightM[r*2]) : createEmpty());
+                    grid.appendChild(rightM[r*2+1] ? createCard(rightM[r*2+1]) : createEmpty());
                 }
+                area.appendChild(table);
             }
-            area.appendChild(table);
         });
     }
 
-    function createCard(s, extraClass = "") {
+    function createTable(title) {
+        const div = document.createElement('div');
+        div.className = `group-table gr-${title}`;
+        div.innerHTML = `<div class="left-header">${title}</div><div class="right-content"><div class="member-grid"></div></div>`;
+        if(!title) div.querySelector('.left-header').style.display = 'none';
+        return div;
+    }
+
+    function createCard(s, span = "") {
         let active = false;
         for(let i=1; i<=12; i++) if(vData[`${currentY}-${String(i).padStart(2,'0')}`]?.[s.n]) { active = true; break; }
         const card = document.createElement('div');
-        card.className = `person-card ${extraClass} ${active ? 'active' : ''}`;
+        card.className = `person-card ${active ? 'active' : ''}`;
+        if(span) card.style.gridColumn = span;
         card.innerHTML = `<span class="pos">${s.p}</span><span class="name">${s.n}</span>`;
         card.onclick = () => openModal(s);
         return card;
     }
 
-    function createLabelCard(text, extraClass = "") {
+    function createBuildingCard(text, span) {
         const div = document.createElement('div');
-        div.className = `person-card label-card ${extraClass}`;
-        div.innerHTML = `<span class="name" style="font-size:11px;">${text}</span>`;
+        div.className = 'person-card building-card';
+        div.style.gridColumn = span;
+        div.innerHTML = `<span class="name" style="font-size:12px;">${text}</span>`;
         return div;
     }
 
-    function createEmptyCard() { const div = document.createElement('div'); div.className = 'empty-card'; return div; }
+    function createEmpty() { const d = document.createElement('div'); d.className = 'empty-card'; return d; }
+
     function openModal(s) {
         selectedUser = s;
         document.getElementById('m-pos').innerText = s.g + " · " + s.p;
