@@ -59,12 +59,12 @@
         </div>
 
         <div class="flex border-b bg-slate-50 sticky top-0 z-50">
-            <button onclick="openTab('status')" id="btn-status" class="nav-tab flex-1 py-4 text-[11px] font-black text-slate-400">🕒 실시간현황</button>
-            <button onclick="openTab('schedule')" id="btn-schedule" class="nav-tab flex-1 py-4 text-[11px] font-black text-slate-400">📅 근무편성표</button>
-            <button onclick="openTab('calendar')" id="btn-calendar" class="nav-tab active flex-1 py-4 text-[11px] font-black">🏥 근무달력</button>
+	<button onclick="openTab('status')" id="btn-status" class="nav-tab active flex-1 py-4 text-[11px] font-black">🕒 실시간현황</button>
+	<button onclick="openTab('schedule')" id="btn-schedule" class="nav-tab flex-1 py-4 text-[11px] font-black text-slate-400">📅 근무편성표</button>
+	<button onclick="openTab('calendar')" id="btn-calendar" class="nav-tab flex-1 py-4 text-[11px] font-black text-slate-400">🏥 근무달력</button>
         </div>
 
-        <div id="status" class="tab-content p-3 space-y-4">
+        <div id="status" class="tab-content active p-3 space-y-4"> 
             <div id="time-msg" class="bg-white p-5 rounded-2xl border text-center font-black text-[#2E4077] shadow-sm"></div>
             <div id="worker-cards" class="grid grid-cols-2 gap-2"></div>
             <div class="flex justify-between items-center px-1">
@@ -81,10 +81,15 @@
                 <div class="flex justify-between font-black text-[10px] text-slate-400">
                     <span id="slider-label" class="text-[#2E4077]">조회 범위 설정</span>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="updateScheduleRange(1)" class="flex-1 py-2 bg-white border rounded-lg text-[11px] font-bold hover:bg-slate-100">1개월</button>
-                    <button onclick="updateScheduleRange(3)" class="flex-1 py-2 bg-white border rounded-lg text-[11px] font-bold hover:bg-slate-100">3개월</button>
-                    <button onclick="updateScheduleRange(6)" class="flex-1 py-2 bg-white border rounded-lg text-[11px] font-bold hover:bg-slate-100">6개월</button>
+                <div class="space-y-2">
+                    <div class="flex gap-2">
+                        <button onclick="updateScheduleRange(-6)" class="flex-1 py-2 bg-slate-200 border rounded-lg text-[10px] font-bold hover:bg-slate-300 text-slate-700">- 6개월</button>
+                        <button onclick="updateScheduleRange(-3)" class="flex-1 py-2 bg-slate-200 border rounded-lg text-[10px] font-bold hover:bg-slate-300 text-slate-700">- 3개월</button>
+                        <button onclick="updateScheduleRange(-1)" class="flex-1 py-2 bg-slate-200 border rounded-lg text-[10px] font-bold hover:bg-slate-300 text-slate-700">- 1개월</button>
+                        <button onclick="updateScheduleRange(1)" class="flex-1 py-2 bg-white border rounded-lg text-[10px] font-bold hover:bg-slate-100">+ 1개월</button>
+                        <button onclick="updateScheduleRange(3)" class="flex-1 py-2 bg-white border rounded-lg text-[10px] font-bold hover:bg-slate-100">+ 3개월</button>
+                        <button onclick="updateScheduleRange(6)" class="flex-1 py-2 bg-white border rounded-lg text-[10px] font-bold hover:bg-slate-100">+ 6개월</button>
+                    </div>
                 </div>
                 <select id="worker-focus" onchange="renderSchedule()" class="w-full p-3 border rounded-xl text-xs font-bold bg-white outline-none">
                     <option value="none">✨ 이름 강조 선택</option>
@@ -96,7 +101,7 @@
             </div>
         </div>
 
-        <div id="calendar" class="tab-content active p-3 space-y-3">
+        <div id="calendar" class="tab-content p-3 space-y-3">
             <div class="grid grid-cols-2 gap-2">
                 <div class="flex items-center bg-white border rounded-xl h-12 shadow-sm overflow-hidden">
                     <button onclick="changeMonth(-1)" class="px-4 font-bold text-slate-300">＜</button>
@@ -331,24 +336,58 @@
             const focus = document.getElementById('worker-focus').value;
             const weekDays = ['일','월','화','수','목','금','토'];
             let h = `<thead><tr><th>날짜</th><th>조장</th><th>회관</th><th>의산연A</th><th>의산연B</th></tr></thead><tbody>`;
-            for (let i = 0; i < scheduleMonthRange * 31; i++) {
-                let d = new Date(); d.setDate(d.getDate() + i); d.setHours(12,0,0,0);
+    
+            let startDate = new Date();
+            startDate.setHours(12, 0, 0, 0); // 날짜 계산 오차 방지
+    
+            let totalDays = 0;
+
+            // scheduleMonthRange가 음수면 과거 N개월 전부터 오늘까지, 양수면 오늘부터 미래까지
+            if (scheduleMonthRange < 0) {
+                startDate.setMonth(startDate.getMonth() + scheduleMonthRange);
+                const today = new Date();
+                today.setHours(12, 0, 0, 0);
+                // 시작일부터 오늘까지의 총 일수 계산
+               totalDays = Math.round((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            } else {
+                totalDays = scheduleMonthRange * 31;
+            }
+
+            const todayStr = new Date().toDateString();
+
+            for (let i = 0; i < totalDays; i++) {
+                let d = new Date(startDate);
+                d.setDate(startDate.getDate() + i);
+        
+                // C조인 날짜만 행으로 생성
                 if (getShiftInfo(d).name === 'C') {
-                    const ws = getWorkers(d), y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), ds = String(d.getDate());
+                    const ws = getWorkers(d);
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const ds = String(d.getDate());
                     const dayIdx = d.getDay();
-                    let dateColorClass = "text-slate-800";
-                    if(dayIdx === 0 || (config.holidays[`${y}-${m}`] && config.holidays[`${y}-${m}`].includes(parseInt(ds)))) dateColorClass = "text-red-500";
-                    if(dayIdx === 6) dateColorClass = "text-blue-500";
+            
+                    // 오늘 날짜인 경우 강조 (과거 목록 볼 때 유용함)
+                    const isToday = d.toDateString() === todayStr;
+                    const rowStyle = isToday ? 'style="background-color: #fff7ed; outline: 2px solid #fdba74;"' : '';
+            
+                    const holidayList = config.holidays[`${y}-${m}`] || [];
+                    let dateColorClass = (dayIdx === 0 || holidayList.includes(parseInt(ds))) ? "text-red-500" : (dayIdx === 6 ? "text-blue-500" : "text-slate-800");
+            
                     const mv = vData[`${y}-${m}`] || {};
-                    h += `<tr><td class="font-black bg-slate-50 ${dateColorClass}">${d.getMonth()+1}/${d.getDate()}(${weekDays[dayIdx]})</td>`;
+                    h += `<tr ${rowStyle}><td class="font-black bg-slate-50 ${dateColorClass}">${d.getMonth() + 1}/${d.getDate()}(${weekDays[dayIdx]})</td>`;
+            
                     ws.forEach(w => {
-                        const isV = mv[w] && mv[w].split(',').map(v=>v.trim()).includes(ds);
-                        h += `<td style="background:${w===focus?WORKER_COLORS[w].bg:WORKER_COLORS[w].toneUp}; color:${w===focus?'white':'black'}">${w}${isV?'🚩':''}</td>`;
+                        const isV = mv[w] && mv[w].split(',').map(v => v.trim()).includes(ds);
+                        // 인덱스 안전 접근을 위해 ? 사용
+                        const bgColor = w === focus ? WORKER_COLORS[w]?.bg : WORKER_COLORS[w]?.toneUp;
+                        const textColor = w === focus ? 'white' : 'black';
+                        h += `<td style="background:${bgColor}; color:${textColor}">${w}${isV ? '🚩' : ''}</td>`;
                     });
-                    h += `</tr>`;
+                    h += "</tr>";
                 }
             }
-            document.getElementById('schedule-list').innerHTML = h;
+            document.getElementById('schedule-list').innerHTML = h + "</tbody>";
         }
 
         // --- 탭 3: 달력 로직 ---
@@ -563,7 +602,8 @@
         window.onload = () => {
             updateShiftSelector();
             db.collection("vocation_app").doc("config").get().then(doc => { if(doc.exists) { config = {...config, ...doc.data()}; updateShiftSelector(); } });
-            db.collection("vocation_app").doc("data").onSnapshot(doc => { if(doc.exists) { vData = doc.data().vocation || {}; staffData = doc.data().staff || []; renderCalendar(); renderStatus(); } });
+            db.collection("vocation_app").doc("data").onSnapshot(doc => { if(doc.exists) { vData = doc.data().vocation || {}; staffData = doc.data().staff || []; // 탭1을 열면서 관련 데이터를 모두 렌더링하도록 강제 호출
+        openTab('status'); } });
             setInterval(() => { 
                 const now = new Date();
                 document.getElementById('clock').innerText = now.toLocaleString(); 
