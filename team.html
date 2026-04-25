@@ -410,6 +410,58 @@
             }
         }
 
+        function renderFloatingList() {
+    const container = document.getElementById('listContent');
+    const showAll = document.getElementById('showAllCheck').checked;
+    if (!container) return;
+    
+    container.innerHTML = '';
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    
+    // 선택된 월의 마지막 날짜 계산
+    const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    for (let d = 1; d <= lastDate; d++) {
+        const targetDate = new Date(currentYear, currentMonth, d);
+        if (!showAll && targetDate < now) continue;
+
+        const vocs = getSortedDayVocs(currentYear, currentMonth, d);
+        if (vocs.length > 0) {
+            const sInfo = getShiftInfo(targetDate);
+            const item = document.createElement('div');
+            // 가로 한 줄 레이아웃 적용
+            item.className = "flex items-center gap-2 p-3 bg-white border rounded-2xl shadow-sm mb-2";
+            
+            let html = `
+                <div class="text-[12px] font-black text-slate-700 whitespace-nowrap min-w-[55px]">
+                    ${currentMonth + 1}/${d} (${['일','월','화','수','목','금','토'][targetDate.getDay()]})
+                </div>
+                <div class="px-2 py-0.5 rounded text-[10px] font-black text-white" style="background-color:${sInfo.colors[1]}">
+                    ${sInfo.name}
+                </div>
+                <div class="flex flex-wrap gap-1 items-center">
+            `;
+            
+            vocs.forEach(v => {
+                const isSung = v.g.includes('성의');
+                html += `
+                    <div class="flex items-center gap-1">
+                        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold text-white ${isSung ? 'bg-purple-500' : 'bg-orange-500'}">
+                            ${isSung ? '성의회관' : '옴니버스'}
+                        </span>
+                        <span class="text-[12px] font-bold text-slate-700">${v.name}</span>
+                    </div>
+                `;
+            });
+            
+            item.innerHTML = html + `</div>`;
+            container.appendChild(item);
+        }
+    }
+}
+
+
         // --- 기타 UI 제어 함수들 ---
         function toggleFullTable() { isFullTable = !isFullTable; renderStatus(); }
         function openTab(id) { 
@@ -430,7 +482,28 @@
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         function showDetail(title, vocs) {
             document.getElementById('detailHeader').innerText = title;
-            document.getElementById('detailBody').innerHTML = vocs.map(v => `<div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl"><div class="flex items-center"><span class="badge ${v.g.includes('성의')?'badge-sung':'badge-omni'}">${v.g.includes('성의')?'성의회관':'옴니버스'}</span><span class="font-black text-slate-700">${v.s} ${v.name}</span></div></div>`).join('');
+            
+            // 현재 날짜의 조 정보를 가져오기 위해 타이틀에서 날짜 추출 (또는 현재 선택된 날짜 기준)
+            const sInfo = getShiftInfo(new Date(currentYear, currentMonth, parseInt(title.match(/\d+일/)[0])));
+
+            document.getElementById('detailBody').innerHTML = vocs.map(v => {
+                const isSung = v.g.includes('성의');
+                return `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-black text-white ${isSung ? 'bg-[#a855f7]' : 'bg-[#f97316]'}">
+                                ${isSung ? '성의회관' : '옴니버스'}
+                            </span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-black text-white" style="background-color:${sInfo.colors[1]}">
+                                ${sInfo.name}조
+                            </span>
+                            <span class="font-bold text-slate-700 text-sm ml-1">${v.name}</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 italic">연차</span>
+                    </div>
+                `;
+            }).join('');
+            
             document.getElementById('detailModal').classList.add('active');
         }
 
