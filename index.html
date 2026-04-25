@@ -83,7 +83,6 @@
                 <div>
                     <h1 class="text-2xl font-black tracking-tighter">성의교정 통합조회</h1>
                     <div id="datePickerTrigger" class="custom-date-trigger">날짜 선택</div>
-                    <div id="cache-status" class="text-[9px] text-white opacity-40 mt-1"></div>
                 </div>
                 <div id="shift-badge" onclick="navigateTo('team.html')" class="px-4 py-2 rounded-xl font-black text-[13px] shadow-sm cursor-pointer active:scale-95 transition-transform">--조 근무</div>
             </div>
@@ -106,16 +105,19 @@
             </div>
         </div>
 
+        <!-- 근무 편성 카드 -->
         <div onclick="openDutyModal()" class="table-card mt-2">
             <div class="table-header label-duty">근무<br>편성</div>
             <div id="duty-preview-container" class="table-body"></div>
         </div>
 
+        <!-- 오늘 행사 카드 -->
         <div onclick="navigateTo('rentalm.html')" class="table-card">
             <div class="table-header label-event">오늘<br>행사</div>
             <div id="event-list" class="table-body"><div class="text-slate-300 text-xs">로드 중...</div></div>
         </div>
 
+        <!-- 오늘 식단 카드 -->
         <div onclick="navigateTo('meal.html')" class="table-card">
             <div class="table-header label-meal">오늘<br>식단</div>
             <div class="table-body">
@@ -125,6 +127,7 @@
         </div>
     </div>
 
+    <!-- 근무 일정 모달 -->
     <div id="dutyModal" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -147,14 +150,14 @@
         const teamC = [["황재업", "김태언", "이태원", "이정석"], ["황재업", "김태언", "이정석", "이태원"], ["황재업", "이정석", "김태언", "이태원"], ["황재업", "이정석", "이태원", "김태언"], ["황재업", "이태원", "김태언", "이정석"], ["황재업", "이태원", "이정석", "김태언"]];
 
         let currentDate = new Date();
-        let vData = {};
+        let vData = {}; // Firebase에서 받아올 연차 데이터
 
         function navigateTo(url) {
             const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
             window.location.href = `${url}?date=${dateStr}`;
         }
 
-        // [핵심] C조 전용: 연차 발생 시 해당 인원을 회관 근무(인덱스 1)로 스왑
+        // C조 스왑 로직 포함된 근무자 명단 추출
         function getShiftNames(shift, diff, date) {
             let namesArr = [];
             const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), dVal = String(date.getDate());
@@ -168,11 +171,10 @@
                 const cIdx = Math.floor(((diff % 18) + 18) % 18 / 3);
                 namesArr = [...teamC[cIdx]];
                 
-                // C조 연차 스왑 로직 (연차는 항상 1명)
+                // C조 연차 스왑: 연차자가 회관 근무(Index 1)가 아니면 1번과 위치 변경
                 for(let i = 0; i < namesArr.length; i++) {
                     const name = namesArr[i];
                     if (vocation[name] && vocation[name].split(',').map(v=>v.trim()).includes(dVal)) {
-                        // 연차자가 회관 근무 위치(인덱스 1)가 아니면 1번과 맞바꿈
                         if (i !== 1) {
                             [namesArr[1], namesArr[i]] = [namesArr[i], namesArr[1]];
                         }
@@ -181,6 +183,45 @@
                 }
             }
             return namesArr;
+        }
+
+        function updateDutyUI() {
+            const days = ['일','월','화','수','목','금','토'];
+            const container = document.getElementById('duty-preview-container');
+            
+            const render = (d, op = "") => {
+                const diff = Math.round((new Date(d).setHours(0,0,0,0) - new Date(baseDate).setHours(0,0,0,0)) / 86400000);
+                const s = patterns[((diff % 3) + 3) % 3];
+                const namesArr = getShiftNames(s, diff, d);
+                
+                const vocation = (vData[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] || {});
+                const dVal = String(d.getDate());
+                let vNames = namesArr.filter(n => vocation[n] && vocation[n].split(',').map(v=>v.trim()).includes(dVal));
+
+                // 근무 명단 표시 (연차자는 취소선)
+                const namesDisplay = namesArr.map(name => 
+                    vNames.includes(name) ? `<span class="text-red-400 line-through">${name}</span>` : name
+                ).join(' ');
+
+                if(op === "") {
+                    const badge = document.getElementById('shift-badge');
+                    badge.innerText = `${s}조 근무`;
+                    badge.className = `px-4 py-2 rounded-xl font-black text-[13px] shadow-sm bg-shift-${s} text-white cursor-pointer active:scale-95 transition-transform`;
+                }
+
+                return `
+                <div class="duty-item ${op}">
+                    <div class="duty-main">
+                        <span class="duty-date ${d.getDay()===0?'day-sun':d.getDay()===6?'day-sat':''}">${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]})</span>
+                        <span class="duty-shift bg-shift-${s}">${s}조</span>
+                        <span class="duty-names">${namesDisplay}</span>
+                    </div>
+                    ${vNames.length ? `<div class="vocation-line">🚩 주간연차: ${vNames.join(', ')}</div>` : ""}
+                </div>`;
+            };
+
+            const tom = new Date(currentDate); tom.setDate(currentDate.getDate() + 1);
+            container.innerHTML = render(currentDate) + render(tom, "opacity-40");
         }
 
         function openDutyModal() {
@@ -197,6 +238,10 @@
                 const vocation = (vData[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] || {});
                 let vNames = namesArr.filter(n => vocation[n] && vocation[n].split(',').map(v=>v.trim()).includes(String(d.getDate())));
 
+                const namesDisplay = namesArr.map(name => 
+                    vNames.includes(name) ? `<span class="text-red-400 line-through">${name}</span>` : name
+                ).join(', ');
+
                 const item = document.createElement('div');
                 item.className = 'modal-item flex items-start gap-2'; 
                 item.innerHTML = `
@@ -205,8 +250,8 @@
                     </span>
                     <span class="duty-shift bg-shift-${s} px-2 py-0.5 rounded text-white text-[10px] font-black flex-shrink-0 mt-0.5">${s}조</span>
                     <div class="flex-grow ml-1 min-w-0">
-                        <div class="text-[13px] font-semibold text-slate-600">${namesArr.join(', ')}</div>
-                        ${vNames.length ? `<div class="vocation-line text-red-500 font-bold text-[11px] mt-1">🚩 주간연차: ${vNames.join(', ')}</div>` : ""}
+                        <div class="text-[13px] font-semibold text-slate-600">${namesDisplay}</div>
+                        ${vNames.length ? `<div class="text-red-500 font-bold text-[11px] mt-1">🚩 연차: ${vNames.join(', ')}</div>` : ""}
                     </div>
                 `;
                 listContainer.appendChild(item);
@@ -215,39 +260,6 @@
         }
 
         function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
-
-        function updateDutyUI() {
-            const days = ['일','월','화','수','목','금','토'];
-            const container = document.getElementById('duty-preview-container');
-            
-            const render = (d, op = "") => {
-                const diff = Math.round((new Date(d).setHours(0,0,0,0) - new Date(baseDate).setHours(0,0,0,0)) / 86400000);
-                const s = patterns[((diff % 3) + 3) % 3];
-                const namesArr = getShiftNames(s, diff, d);
-                
-                const vocation = (vData[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] || {});
-                let vNames = namesArr.filter(n => vocation[n] && vocation[n].split(',').map(v=>v.trim()).includes(String(d.getDate())));
-
-                if(op === "") {
-                    const badge = document.getElementById('shift-badge');
-                    badge.innerText = `${s}조 근무`;
-                    badge.className = `px-4 py-2 rounded-xl font-black text-[13px] shadow-sm bg-shift-${s} text-white cursor-pointer active:scale-95 transition-transform`;
-                }
-
-                return `
-                <div class="duty-item ${op}">
-                    <div class="duty-main">
-                        <span class="duty-date ${d.getDay()===0?'day-sun':d.getDay()===6?'day-sat':''}">${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]})</span>
-                        <span class="duty-shift bg-shift-${s}">${s}조</span>
-                        <span class="duty-names">${namesArr.join(' ')}</span>
-                    </div>
-                    ${vNames.length ? `<div class="vocation-line">🚩 주간연차: ${vNames.join(', ')}</div>` : ""}
-                </div>`;
-            };
-
-            const tom = new Date(currentDate); tom.setDate(currentDate.getDate() + 1);
-            container.innerHTML = render(currentDate) + render(tom, "opacity-40");
-        }
 
         async function updateEvents(date) {
             const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -275,9 +287,13 @@
 
         async function loadFirebaseData() {
             try {
-                const doc = await db.collection("vocation_app").doc("data").get();
-                if (doc.exists) { vData = doc.data().vocation || {}; }
-                updateDisplay();
+                // 실시간 리스너를 사용하여 데이터 변경 시 즉시 반영
+                db.collection("vocation_app").doc("data").onSnapshot(doc => {
+                    if (doc.exists) { 
+                        vData = doc.data().vocation || {}; 
+                        updateDisplay();
+                    }
+                });
             } catch(e) { updateDisplay(); }
         }
 
@@ -294,4 +310,3 @@
     </script>
 </body>
 </html>
-
