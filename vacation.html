@@ -12,7 +12,7 @@
         
         .content-area { display: flex; justify-content: center; padding: 20px 10px; min-height: 100vh; box-sizing: border-box; }
         
-        /* [수정] 모달/인쇄 제외 기본 paper 설정 */
+        /* [규격 유지] A4 가로 출력 규격 보존 */
         #paper { 
             background: white; 
             width: 285mm; 
@@ -23,24 +23,23 @@
             position: relative; 
             box-shadow: 0 0 20px rgba(0,0,0,0.1); 
             border-radius: 4px;
-            max-width: 100%; /* 화면보다 커지지 않게 제한 */
-            overflow: hidden; /* 내부 스크롤을 Wrapper에 맡김 */
+            max-width: 100%;
+            overflow: hidden;
         }
 
         #viewTitle { text-align: center; margin: 10px 0 20px 0; font-size: 24px; font-weight: bold; text-decoration: underline; text-underline-offset: 5px; letter-spacing: 2px; }
         
-        /* 🚀 [핵심 수정] 모바일 가로 스크롤 허용 및 앞부분 잘림 방지 */
         #tableWrapper { 
             width: 100%; 
-            overflow-x: auto; /* 가로 스크롤 활성화 */
-            -webkit-overflow-scrolling: touch; /* iOS 부드러운 스크롤 */
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
             border: 1px solid #ddd;
         }
 
         table { 
             border-collapse: collapse; 
             width: 100%; 
-            min-width: 1000px; /* 테이블이 찌그러지지 않도록 최소 너비 강제 (중요) */
+            min-width: 1000px;
             border: 1.5pt solid #000; 
             table-layout: fixed; 
             background: white; 
@@ -53,7 +52,6 @@
         .sun { background-color: var(--sun-bg) !important; color: #dc3545 !important; }
         .v-mark { background-color: #d4edda !important; color: #28a745; font-weight: bold; cursor: pointer; }
 
-        /* 하단 컨트롤 바 */
         .controls-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 2000; }
         #syncStatus { font-size: 11px; font-weight: bold; color: #7f8c8d; background: rgba(255,255,255,0.9); padding: 4px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .floating-bar { display: flex; align-items: center; gap: 8px; background: white; padding: 10px 20px; border-radius: 40px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); border: 1px solid #ddd; }
@@ -65,21 +63,18 @@
         #adminMenu { display: none; gap: 5px; align-items: center; }
         input[type="month"] { border: 1px solid #ddd; padding: 7px 12px; border-radius: 20px; font-weight: bold; outline: none; }
 
-        /* 📱 [추가] 모바일 최적화 미디어 쿼리 */
         @media screen and (max-width: 768px) {
             #paper { width: 100%; padding: 5px; border-radius: 0; box-shadow: none; }
             #viewTitle { font-size: 18px; margin-bottom: 10px; }
             .floating-bar { padding: 5px 10px; scale: 0.85; transform-origin: right bottom; }
         }
 
-        /* 모달 디자인 (기존 유지) */
         #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; z-index: 3000; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 350px; overflow: hidden; }
         #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2999; backdrop-filter: blur(2px); }
         .modal-hdr { background: var(--primary-blue); color: white; padding: 18px; font-weight: bold; text-align: center; font-size: 18px; }
         .modal-body { padding: 30px 20px; text-align: center; }
         .close-btn { width: 100%; padding: 15px; background: #f8f9fa; border: none; border-top: 1px solid #eee; cursor: pointer; font-weight: bold; font-size: 16px; }
 
-        /* 인쇄 최적화 (기존 유지) */
         @media print {
             @page { size: A4 landscape; margin: 10mm 10mm; }
             html, body { background: white !important; }
@@ -103,14 +98,12 @@
 <div class="content-area">
     <div id="paper">
         <h2 id="viewTitle">데이터 연결 중...</h2>
-        <!-- 가로 스크롤 가능 구역 -->
         <div id="tableWrapper">
             <table id="displayTable"></table>
         </div>
     </div>
 </div>
 
-<!-- 컨트롤 바 이하는 질문자님의 원본 로직과 동일하므로 생략하거나 그대로 붙여넣으시면 됩니다 -->
 <div class="controls-container">
     <div id="syncStatus">Firestore 연결 대기...</div>
     <div class="floating-bar">
@@ -129,7 +122,6 @@
 </div>
 
 <script>
-    /* 스크립트 부분은 원본과 동일하게 유지하시면 됩니다. */
     const firebaseConfig = {
         apiKey: "AIzaSyDGDUudF49hnXwU55er7joyeSLEPrme1GU",
         authDomain: "catholic-security-system.firebaseapp.com",
@@ -165,12 +157,9 @@
         const [y, mSelected] = val.split('-').map(Number);
         if (currentTab === 'ledger') renderLedger(y);
         else renderSchedule(y, mSelected);
-        
-        // 렌더링 후 스크롤을 맨 왼쪽으로 초기화하여 1일이 보이도록 함
         document.getElementById('tableWrapper').scrollLeft = 0;
     }
 
-    /* 나머지 함수(renderSchedule, renderLedger, generateRows 등)는 원본 그대로 유지 */
     function renderSchedule(y, m) {
         const lastDay = new Date(y, m, 0).getDate();
         document.getElementById('viewTitle').innerText = `성의교정 연차 일정표(${y}년 ${m}월)`;
@@ -271,7 +260,7 @@
         if (vList.length === 0) { listHtml = '<div style="color:#999; padding:20px;">연차 인원이 없습니다.</div>'; }
         else {
             vList.forEach(item => {
-                listHtml += `<div class="v-list-item"><span style="color:#7f8c8d; font-size:13px;">[${item.g}]</span> <b>${item.s} ${item.n}</b></div>`;
+                listHtml += `<div style="padding:8px; border-bottom:1px solid #eee;"> <span style="color:#7f8c8d; font-size:13px;">[${item.g}]</span> <b>${item.s} ${item.n}</b></div>`;
             });
         }
         document.getElementById('modalContent').innerHTML = listHtml;
@@ -280,6 +269,7 @@
 
     function openModal() { document.getElementById('modal').style.display = 'block'; document.getElementById('modalOverlay').style.display = 'block'; }
     function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('modalOverlay').style.display = 'none'; }
+    
     function toggleAdmin() {
         const menu = document.getElementById('adminMenu');
         if (menu.style.display === 'flex') { menu.style.display = 'none'; }
@@ -289,11 +279,30 @@
             else if (pw !== null) alert("비밀번호가 틀렸습니다.");
         }
     }
+
     function toggleEditCol(colId) { activeEditColumn = (activeEditColumn === colId) ? null : colId; render(); }
-    async function updateName(idx, val) { staffData[idx].n = val; await saveData(); }
-    async function updateV(mk, n, v) { if(!vData[mk]) vData[mk] = {}; vData[mk][n] = v; await saveData(); }
-    async function saveData() { await db.collection("vocation_app").doc("data").update({ staff: staffData, vocation: vData }); }
+    
+    // [핵심 수정] 필드 단위로 안전하게 저장하여 다른 데이터 유실 방지
+    async function updateName(idx, val) {
+        staffData[idx].n = val;
+        await db.collection("vocation_app").doc("data").update({ staff: staffData });
+    }
+
+    async function updateV(mk, n, v) {
+        if(!vData[mk]) vData[mk] = {};
+        vData[mk][n] = v;
+        // Dot Notation을 사용하여 특정 월의 특정 인원 데이터만 업데이트
+        await db.collection("vocation_app").doc("data").update({
+            [`vocation.${mk}.${n}`]: v
+        });
+    }
+
+    async function saveData() {
+        await db.collection("vocation_app").doc("data").update({ staff: staffData, vocation: vData });
+    }
+
     function changeTab(tab) { currentTab = tab; activeEditColumn = null; render(); }
+
     async function backupData() {
         const doc = await db.collection("vocation_app").doc("data").get();
         const data = JSON.stringify(doc.data(), null, 2);
@@ -304,6 +313,7 @@
         a.download = `성의교정_백업_${new Date().toISOString().slice(0,10)}.json`;
         a.click();
     }
+
     function restoreData(event) {
         const file = event.target.files[0];
         if (!file) return;
