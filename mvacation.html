@@ -1,169 +1,74 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>연차 관리 시스템</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+import streamlit as st
+import json
+
+# 1. 제이슨 스타일 명단 데이터 (하드코딩)
+staff_json = """
+[
+    {"section": "지휘부", "name": "이규용", "pos": "보안소장"},
+    {"section": "지휘부", "name": "박상현", "pos": "부소장"},
+    {"section": "반장", "name": "유정수", "pos": ""},
+    {"section": "반장", "name": "오제준", "pos": ""},
+    {"section": "A조", "name": "배준용", "pos": ""},
+    {"section": "A조", "name": "이명구", "pos": ""},
+    {"section": "A조", "name": "손병휘", "pos": ""},
+    {"section": "A조", "name": "권순호", "pos": ""},
+    {"section": "A조", "name": "김영중", "pos": ""},
+    {"section": "A조", "name": "김삼동", "pos": ""},
+    {"section": "A조", "name": "김전식", "pos": ""},
+    {"section": "B조", "name": "심규천", "pos": ""},
+    {"section": "B조", "name": "임종현", "pos": ""},
+    {"section": "B조", "name": "황일범", "pos": ""},
+    {"section": "B조", "name": "이상길", "pos": ""},
+    {"section": "B조", "name": "권영국", "pos": ""},
+    {"section": "B조", "name": "전준수", "pos": ""},
+    {"section": "B조", "name": "허용", "pos": ""},
+    {"section": "C조", "name": "황재업", "pos": ""},
+    {"section": "C조", "name": "이태원", "pos": ""},
+    {"section": "C조", "name": "피재영", "pos": ""},
+    {"section": "C조", "name": "남형민", "pos": ""},
+    {"section": "C조", "name": "김태언", "pos": ""},
+    {"section": "C조", "name": "이정석", "pos": ""},
+    {"section": "C조", "name": "강경훈", "pos": ""}
+]
+"""
+staff_data = json.loads(staff_json)
+
+# 2. CSS 스타일 설정
+st.markdown("""
     <style>
-        :root { 
-            --bg: #f8f9fa; --tab-grey: #e9ecef;
-            --color-a: #d3f9d8; --color-b: #ffec99; --color-c: #ffc9c9;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; }
-        body { background: var(--bg); padding: 10px; }
-
-        .app-container { max-width: 800px; margin: 0 auto; }
-        
-        .section-row { 
-            display: flex; background: #fff; border-radius: 18px; 
-            margin-bottom: 12px; overflow: hidden; 
-            box-shadow: 0 3px 10px rgba(0,0,0,0.08); border: 1px solid #eef0f2;
-        }
-
-        .tab-cell { 
-            width: 65px; display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: 14px; color: #495057; background: #eee;
-            flex-shrink: 0; text-align: center;
-        }
-
-        .grid-area { 
-            display: grid; grid-template-columns: repeat(4, 1fr); 
-            flex-grow: 1; gap: 8px; padding: 12px; 
-        }
-
-        .building-label { 
-            grid-column: span 2; background: #495057; color: #fff; font-size: 11px; 
-            font-weight: bold; display: flex; align-items: center; justify-content: center; 
-            height: 24px; border-radius: 6px; margin-bottom: 2px;
-        }
-
-        .card { 
-            background: #fff; border-radius: 12px; height: 50px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border: 1px solid #eee; cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        }
-
-        /* [핵심] 이름 크기 축소: 이미지와 동일하게 작고 단정하게 유지 */
-        .pos { font-size: 8px; color: #339af0; font-weight: bold; margin-bottom: 1px; }
-        .name { font-size: 14px; font-weight: 900; color: #212529; }
-
-        .row-A .tab-cell { background: var(--color-a); }
-        .row-B .tab-cell { background: var(--color-b); }
-        .row-C .tab-cell { background: var(--color-c); }
-
-        .active { border: 2.5px solid #339af0 !important; background: #fff !important; }
-        .empty-card { border: 1.2px dashed #ced4da; background: transparent; box-shadow: none; }
-
-        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; }
-        .modal-content { background: #fff; width: 100%; max-width: 500px; padding: 25px; border-radius: 25px 25px 0 0; }
-        .m-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .m-btn { width: 100%; padding: 15px; margin-top: 15px; background: #212529; color: #fff; border: none; border-radius: 12px; font-weight: bold; }
+    .section-row { display: flex; background: #fff; border-radius: 15px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #eee; }
+    .tab-cell { width: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; color: #444; background: #f0f2f6; flex-shrink: 0; text-align: center; }
+    .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 10px; }
+    .label-building { grid-column: span 2; background: #495057; color: #fff; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; height: 22px; border-radius: 5px; margin-bottom: 2px; }
+    .card { background: #fff; border-radius: 10px; height: 45px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #eee; }
+    .pos { font-size: 8px; color: #339af0; font-weight: bold; margin-bottom: 1px; }
+    .name { font-size: 15px; font-weight: bold; color: #212529; }
+    .row-A .tab-cell { background: #d3f9d8; }
+    .row-B .tab-cell { background: #ffec99; }
+    .row-C .tab-cell { background: #ffc9c9; }
+    .empty-card { border: 1px dashed #ccc; background: transparent; }
     </style>
-</head>
-<body>
+""", unsafe_allow_html=True)
 
-<div class="app-container" id="main-table"></div>
+def card_html(person):
+    if not person: return '<div class="card empty-card"></div>'
+    pos = f'<span class="pos">{person["pos"]}</span>' if person["pos"] else ''
+    return f'<div class="card">{pos}<span class="name">{person["name"]}</span></div>'
 
-<div id="modal" onclick="closeModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 id="m-name" style="text-align:center; margin-bottom:20px; font-weight:900;"></h3>
-        <div class="m-grid" id="m-grid"></div>
-        <button class="m-btn" onclick="save()">저장하기</button>
-    </div>
-</div>
+# 3. 화면 렌더링
+# 지휘부
+leaders = [p for p in staff_data if p['section'] == '지휘부']
+st.markdown(f'<div class="section-row"><div class="tab-cell">지휘부</div><div class="grid-area">{card_html(leaders[0])}{card_html(leaders[1])}<div class="card empty-card"></div><div class="card empty-card"></div></div></div>', unsafe_allow_html=True)
 
-<script>
-    const firebaseConfig = { apiKey: "AIzaSyDGDUudF49hnXwU55er7joyeSLEPrme1GU", authDomain: "catholic-security-system.firebaseapp.com", projectId: "catholic-security-system", storageBucket: "catholic-security-system.firebasestorage.app", messagingSenderId: "978946205343", appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa" };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+# 레이블 (반장 위)
+st.markdown('<div style="display: flex; margin-bottom: 2px;"><div style="width: 60px;"></div><div class="grid-area" style="padding: 0 10px;"><div class="label-building">성 의 회 관</div><div class="label-building">옴 니 버 스 파 크</div></div></div>', unsafe_allow_html=True)
 
-    let staffList = [], vData = {};
-    const currentY = 2026;
+# 반장
+chiefs = [p for p in staff_data if p['section'] == '반장']
+st.markdown(f'<div class="section-row"><div class="tab-cell">반장</div><div class="grid-area">{card_html(chiefs[0])}<div class="card empty-card"></div>{card_html(chiefs[1])}<div class="card empty-card"></div></div></div>', unsafe_allow_html=True)
 
-    for(let i=1; i<=12; i++) {
-        document.getElementById('m-grid').innerHTML += `<div style="text-align:center; background:#f8f9fa; padding:10px; border-radius:12px;"><label style="font-size:11px; color:#868e96; font-weight:bold;">${i}월</label><br><input type="text" id="month-${i}" style="width:100%; border:none; background:transparent; text-align:center; font-size:16px; font-weight:bold; color:#339af0; outline:none;"></div>`;
-    }
-
-    function init() {
-        db.collection("vacation_app").doc("data").onSnapshot(doc => {
-            if(doc.exists) {
-                staffList = doc.data().staff || [];
-                vData = doc.data().vocation || {};
-                render();
-            }
-        });
-    }
-
-    function render() {
-        const container = document.getElementById('main-table');
-        container.innerHTML = '';
-
-        container.appendChild(createSplitRow("지휘부", s => s.p === "보안소장", s => s.p === "부소장"));
-        container.appendChild(createSplitRow("반장", s => s.g === "반장" && s.n === "유정수", s => s.g === "반장" && s.n === "오제준"));
-
-        const labelRow = document.createElement('div');
-        labelRow.className = 'section-row'; labelRow.style.background = 'transparent'; labelRow.style.border = 'none'; labelRow.style.boxShadow = 'none'; labelRow.style.marginBottom = '2px';
-        labelRow.innerHTML = `<div class="tab-cell" style="background:transparent;"></div><div class="grid-area" style="padding:0 12px;"><div class="building-label">성 의 회 관</div><div class="building-label">옴 니 버 스 파 크</div></div>`;
-        container.appendChild(labelRow);
-
-        ["A조", "B조", "C조"].forEach(group => {
-            container.appendChild(createGroupRow(group));
-        });
-    }
-
-    function createSplitRow(title, leftFilter, rightFilter) {
-        const row = document.createElement('div');
-        row.className = 'section-row';
-        row.innerHTML = `<div class="tab-cell">${title}</div><div class="grid-area"></div>`;
-        const grid = row.querySelector('.grid-area');
-        const left = staffList.filter(leftFilter);
-        const right = staffList.filter(rightFilter);
-        for(let i=0; i<2; i++) grid.appendChild(createCard(left[i] || null));
-        for(let i=0; i<2; i++) grid.appendChild(createCard(right[i] || null));
-        return row;
-    }
-
-    function createGroupRow(group) {
-        const row = document.createElement('div');
-        row.className = `section-row row-${group[0]}`;
-        row.innerHTML = `<div class="tab-cell">${group}</div><div class="grid-area"></div>`;
-        const grid = row.querySelector('.grid-area');
-        const left = staffList.filter(s => s.g === group && (s.p.includes("성의") || s.p.includes("의산연")));
-        const right = staffList.filter(s => s.g === group && s.p.includes("옴니"));
-        for(let i=0; i<2; i++) grid.appendChild(createCard(left[i] || null));
-        for(let i=0; i<2; i++) grid.appendChild(createCard(right[i] || null));
-        return row;
-    }
-
-    function createCard(s) {
-        const card = document.createElement('div');
-        card.className = 'card';
-        if(!s) { card.classList.add('empty-card'); return card; }
-        const isTop = (s.p === "보안소장" || s.p === "부소장");
-        card.innerHTML = `${isTop ? `<span class="pos">${s.p}</span>` : ''}<span class="name">${s.n}</span>`;
-        for(let i=1; i<=12; i++) if(vData[`${currentY}-${String(i).padStart(2,'0')}`]?.[s.n]) card.classList.add('active');
-        card.onclick = () => openModal(s);
-        return card;
-    }
-
-    let selectedUser = null;
-    function openModal(s) {
-        selectedUser = s;
-        document.getElementById('m-name').innerText = s.n;
-        for(let i=1; i<=12; i++) document.getElementById(`month-${i}`).value = vData[`${currentY}-${String(i).padStart(2,'0')}`]?.[s.n] || "";
-        document.getElementById('modal').style.display = 'flex';
-    }
-    function closeModal() { document.getElementById('modal').style.display = 'none'; }
-    async function save() {
-        const up = {};
-        for(let i=1; i<=12; i++) up[`vocation.${currentY}-${String(i).padStart(2,'0')}.${selectedUser.n}`] = document.getElementById(`month-${i}`).value.trim();
-        await db.collection("vacation_app").doc("data").update(up);
-        closeModal();
-    }
-    window.onload = init;
-</script>
-</body>
-</html>
+# 조별 (A, B, C)
+for g in ['A조', 'B조', 'C조']:
+    members = [p for p in staff_data if p['section'] == g]
+    m_html = "".join([card_html(members[i] if i < len(members) else None) for i in range(8)])
+    st.markdown(f'<div class="section-row row-{g[0]}"><div class="tab-cell">{g}</div><div class="grid-area">{m_html}</div></div>', unsafe_allow_html=True)
