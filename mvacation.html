@@ -16,21 +16,16 @@
         .tab-cell { width: 48px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; color: #495057; background: #f1f3f5; flex-shrink: 0; }
         .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 8px; }
         
-        .span-2-center { grid-column: span 2; display: flex; justify-content: center; align-items: center; }
-        .span-2-center .card { width: 100%; max-width: 125px; } 
-
-        /* [핵심 수정] 카드 기본 스타일 및 소속별 테두리 색상 정의 */
+        /* [수정] 상단 소장/반장 카드 크기 최적화 (절반 크기) */
+        .half-grid { grid-template-columns: repeat(2, 1fr) !important; }
         .card { background: #fff; border-radius: 6px; height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; border-width: 2.5px !important; }
         
-        /* 성의회관 소속: 베이지색 테두리 */
-        .border-sung { border-color: #e5dbcd !important; }
-        /* 옴니버스 파크 소속: 녹색 테두리 */
-        .border-omni { border-color: #c9decb !important; }
-        /* 지휘부: 회색 테두리 */
-        .border-leader { border-color: #cbd5e1 !important; }
+        /* 아웃라인 색상 구분 */
+        .border-sung { border-color: #e5dbcd !important; }  /* 성의: 베이지 */
+        .border-omni { border-color: #c9decb !important; }  /* 옴니: 녹색 */
+        .border-leader { border-color: #cbd5e1 !important; } /* 지휘부: 회색 */
 
         .label-building { font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; height: 34px; border-radius: 6px; width: 100%; }
-        /* 건물 라벨 색상은 유지 */
         .bg-sung { background-color: #f3ece3; color: #5d564f; border: 1px solid #e5dbcd; }
         .bg-omni { background-color: #d9eada; color: #4d5d4d; border: 1px solid #c9decb; }
 
@@ -44,13 +39,19 @@
 
         #modal, #listModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; padding: 15px; }
         .modal-content { background: white; width: 100%; max-width: 420px; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
+        
+        /* [수정] 리스트 화면 복구용 스타일 */
+        .list-item { display: flex; align-items: center; padding: 12px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px; border: 1px solid #f1f3f5; }
+        .list-date { font-weight: 900; font-size: 15px; color: #334155; width: 80px; }
+        .badge-s { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; margin-right: 6px; color: white; }
+        .badge-b { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; color: white; }
     </style>
 </head>
 <body class="p-4">
     <div class="max-w-xl mx-auto">
         <div class="unified-header">
             <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-2"><span class="text-2xl">📅</span><h1 class="text-xl font-black text-slate-800">보안 연차 현황</h1></div>
+                <div class="flex items-center gap-2"><h1 class="text-xl font-black text-slate-800">📅 보안 연차 현황</h1></div>
                 <div class="text-[10px] font-bold text-slate-300">● 실시간 연결됨</div>
             </div>
             <div class="flex items-center gap-3">
@@ -64,9 +65,9 @@
 
         <div class="section-row">
             <div class="tab-cell">지휘부</div>
-            <div class="grid-area">
-                <div class="span-2-center"><div class="card border-leader" onclick="openModal('이규용')"><span class="v-badge"></span><span class="pos">보안소장</span><span class="name">이규용</span></div></div>
-                <div class="span-2-center"><div class="card border-leader" onclick="openModal('박상현')"><span class="v-badge"></span><span class="pos">부소장</span><span class="name">박상현</span></div></div>
+            <div class="grid-area half-grid">
+                <div class="card border-leader" onclick="openModal('이규용')"><span class="v-badge"></span><span class="pos">보안소장</span><span class="name">이규용</span></div>
+                <div class="card border-leader" onclick="openModal('박상현')"><span class="v-badge"></span><span class="pos">부소장</span><span class="name">박상현</span></div>
             </div>
         </div>
 
@@ -76,9 +77,9 @@
 
         <div class="section-row">
             <div class="tab-cell">반장</div>
-            <div class="grid-area">
-                <div class="span-2-center"><div class="card border-sung" onclick="openModal('유정수')"><span class="v-badge"></span><span class="name">유정수</span></div></div>
-                <div class="span-2-center"><div class="card border-omni" onclick="openModal('오제준')"><span class="v-badge"></span><span class="name">오제준</span></div></div>
+            <div class="grid-area half-grid">
+                <div class="card border-sung" onclick="openModal('유정수')"><span class="v-badge"></span><span class="name">유정수</span></div>
+                <div class="card border-omni" onclick="openModal('오제준')"><span class="v-badge"></span><span class="name">오제준</span></div>
             </div>
         </div>
 
@@ -88,7 +89,8 @@
     </div>
 
     <div id="listModal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><div id="listContainer"></div></div></div>
-    <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h2 id="modalName" class="font-black text-lg mb-4 text-slate-800"></h2><div class="grid grid-cols-3 gap-3" id="monthGrid"></div><button onclick="closeModal()" class="w-full mt-6 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">닫기</button></div></div>
+    
+    <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h2 id="modalName" class="font-black text-lg mb-4 text-slate-800 text-center"></h2><div class="grid grid-cols-3 gap-3" id="monthGrid"></div><button onclick="closeModal()" class="w-full mt-6 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">닫기</button></div></div>
 
     <script>
         const members = {
@@ -97,14 +99,19 @@
             'C': { sung: ['황재업','이태원'], omni: ['피재영','남형민','김태언','이정석','강경훈'] }
         };
 
-        // [핵심 수정] 렌더링 시 성의회관/옴니버스 소속에 따라 card에 border-sung/border-omni 클래스를 부여
+        // 소속/조 매핑 정보 (리스트 복구용)
+        const staffMap = {};
+        ['A','B','C'].forEach(g => {
+            members[g].sung.forEach(n => staffMap[n] = { s: g, b: 'sung', bName: '성의회관' });
+            members[g].omni.forEach(n => staffMap[n] = { s: g, b: 'omni', bName: '옴니버스' });
+        });
+        ['이규용','박상현','유정수','오제준'].forEach(n => staffMap[n] = staffMap[n] || { s: '-', b: n==='오제준'?'omni':'sung', bName: n==='오제준'?'옴니버스':'성의회관' });
+
         function renderMembers() {
             ['A','B','C'].forEach(g => {
                 const container = document.getElementById(`group-${g}`);
                 let html = '';
-                // 성의회관 소속 (왼쪽): 베이지색 테두리
                 members[g].sung.forEach(n => { html += `<div class="card border-sung" onclick="openModal('${n}')"><span class="v-badge"></span><span class="name">${n}</span></div>`; });
-                // 옴니버스 소속 (오른쪽): 녹색 테두리
                 members[g].omni.forEach(n => { html += `<div class="card border-omni" onclick="openModal('${n}')"><span class="v-badge"></span><span class="name">${n}</span></div>`; });
                 container.innerHTML = html;
             });
@@ -162,21 +169,43 @@
         }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
+        // [복구] 고퀄리티 연차자 리스트 출력 함수
         function showMonthlyList() {
             const m = document.getElementById('monthSelect').value;
             if(!m) return;
             const mk = `2026-${m.padStart(2,'0')}`;
             const data = allVData[mk] || {};
-            let html = `<h2 class="text-lg font-black mb-4">${m}월 연차자 명단</h2><div class="space-y-2">`;
-            let hasData = false;
+            let list = [];
             Object.entries(data).forEach(([name, dates]) => {
                 if(dates.trim()) {
-                    html += `<div class="flex justify-between p-3 bg-slate-50 rounded-lg"><span class="font-bold">${name}</span><span class="text-blue-600 font-medium">${dates}</span></div>`;
-                    hasData = true;
+                    dates.split(',').forEach(d => {
+                        const day = d.trim();
+                        if(day) {
+                            const dateObj = new Date(2026, m-1, day);
+                            const week = ['일','월','화','수','목','금','토'][dateObj.getDay()];
+                            list.push({ name, day: parseInt(day), week, ...staffMap[name] });
+                        }
+                    });
                 }
             });
-            if(!hasData) html += `<div class="text-center py-10 text-slate-400">등록된 연차가 없습니다.</div>`;
-            html += `</div><button onclick="document.getElementById('listModal').style.display='none'" class="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>`;
+            list.sort((a,b) => a.day - b.day);
+
+            let html = `<div class="flex justify-between items-center mb-6"><h2 class="text-xl font-black">${m}월 연차자 명단</h2><button class="text-xs font-bold text-slate-400">과거포함 보기</button></div>`;
+            if(list.length === 0) html += `<div class="text-center py-10 text-slate-400">데이터가 없습니다.</div>`;
+            
+            list.forEach(item => {
+                const sColor = item.s==='A'?'bg-green-500':item.s==='B'?'bg-orange-400':'bg-red-400';
+                const bColor = item.b==='sung'?'bg-purple-500':'bg-orange-500';
+                html += `
+                <div class="list-item">
+                    <div class="list-date">${m}/${item.day} (${item.week})</div>
+                    <span class="badge-s ${sColor}">${item.s}</span>
+                    <span class="badge-b ${bColor}">${item.bName}</span>
+                    <div class="ml-auto font-black text-slate-800 text-lg">${item.name}</div>
+                </div>`;
+            });
+            
+            html += `<button onclick="document.getElementById('listModal').style.display='none'" class="w-full mt-6 py-4 bg-slate-800 text-white rounded-xl font-bold">확인</button>`;
             document.getElementById('listContainer').innerHTML = html;
             document.getElementById('listModal').style.display = 'flex';
         }
