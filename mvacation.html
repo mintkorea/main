@@ -1,139 +1,93 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>성의교정 보안 연차관리</title>
-    <style>
-        :root { 
-            --bg: #f8f9fa; 
-            --color-seongui: #f3ece3; /* 성의회관 베이지 */
-            --color-omnibus: #d9eada; /* 옴니버스 민트 */
-            --color-a: #d3f9d8; --color-b: #ffec99; --color-c: #ffc9c9;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; }
-        body { background: var(--bg); padding: 4px; overflow-x: hidden; }
-        .app-container { max-width: 800px; margin: 0 auto; }
-        
-        .app-title { font-size: 20px; font-weight: 900; color: #212529; text-align: center; padding: 8px 0; }
+<style>
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #ffffff;
+        padding: 12px 15px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        border: 1px solid #eef0f2;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    /* 좌측: 월 선택 섹션 */
+    .month-selector {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .select-box {
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1.5px solid #339af0;
+        background-color: #fff;
+        font-size: 16px;
+        font-weight: 900;
+        color: #339af0;
+        cursor: pointer;
+        outline: none;
+    }
 
-        .section-row { 
-            display: flex; background: #fff; border-radius: 10px; 
-            margin-bottom: 3px; overflow: hidden; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #eef0f2;
-        }
+    /* 중앙: 타이틀 */
+    .header-title {
+        font-size: 19px;
+        font-weight: 900;
+        color: #212529;
+        letter-spacing: -0.5px;
+    }
 
-        .tab-cell { 
-            width: 48px; display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: 11px; color: #495057; background: #f1f3f5;
-            flex-shrink: 0;
-        }
-        .grid-area { 
-            display: grid; grid-template-columns: repeat(4, 1fr); 
-            flex-grow: 1; gap: 3px; padding: 4px; 
-        }
-
-        /* 레이블: 크기 확대 및 건물별 칼라 */
-        .label-building { 
-            grid-column: span 2; font-size: 14px; font-weight: 900; 
-            display: flex; align-items: center; justify-content: center; 
-            height: 34px; border-radius: 6px; margin-bottom: 2px;
-        }
-        .label-seongui { background: var(--color-seongui); color: #5d564f; border: 1px solid #dcd4c9; }
-        .label-omnibus { background: var(--color-omnibus); color: #4d5d4d; border: 1px solid #c2d5c3; }
-
-        /* 카드 설정: 모든 카드 크기 동일 */
-        .card { 
-            background: #fff; border-radius: 6px; height: 38px; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border: 1px solid #eee; width: 100%;
-        }
-        .pos { font-size: 8px; color: #339af0; font-weight: bold; margin-bottom: -1px; }
-        .name { font-size: 15px; font-weight: 900; color: #212529; }
-
-        /* 지휘부/반장 전용 중앙 정렬 그리드 (카드 50% 너비 빈칸 적용) */
-        .center-grid {
-            display: grid; 
-            grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr 1fr 0.5fr; /* 50% 빈칸 좌우 배치 */
-            flex-grow: 1; gap: 3px; padding: 4px;
-        }
-
-        .row-A .tab-cell { background: var(--color-a); }
-        .row-B .tab-cell { background: var(--color-b); }
-        .row-C .tab-cell { background: var(--color-c); }
-        
-        .empty-card { height: 38px; width: 100%; background: transparent; border: none; }
-    </style>
-</head>
-<body>
+    /* 우측: 링크 버튼 */
+    .calendar-link-btn {
+        text-decoration: none;
+        background-color: #f1f3f5;
+        color: #495057;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: bold;
+        border: 1px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .calendar-link-btn:active {
+        background-color: #e9ecef;
+        transform: scale(0.98);
+    }
+    .calendar-link-btn i {
+        margin-left: 4px;
+        font-size: 10px;
+    }
+</style>
 
 <div class="app-container">
-    <div class="app-title">성의교정 보안 연차관리</div>
+    <div class="calendar-header">
+        <div class="month-selector">
+            <select class="select-box">
+                <option>1월</option>
+                <option>2월</option>
+                <option>3월</option>
+                <option selected>4월</option>
+                <option>5월</option>
+                <option>6월</option>
+                <option>7월</option>
+                <option>8월</option>
+                <option>9월</option>
+                <option>10월</option>
+                <option>11월</option>
+                <option>12월</option>
+            </select>
+        </div>
+        
+        <div class="header-title">보안 연차 현황</div>
+        
+        <div class="right-space">
+            <a href="#" class="calendar-link-btn">
+                근무달력 🔗
+            </a>
+        </div>
+    </div>
+
     <div id="main-table"></div>
 </div>
-
-<script>
-    const staffData = [
-        { section: "지휘부", name: "이규용", pos: "보안소장" },
-        { section: "지휘부", name: "박상현", pos: "부소장" },
-        { section: "반장", name: "유정수", pos: "" },
-        { section: "반장", name: "오제준", pos: "" },
-        { section: "A조", name: "배준용", pos: "" }, { section: "A조", name: "이명구", pos: "" },
-        { section: "A조", name: "손병휘", pos: "" }, { section: "A조", name: "권순호", pos: "" },
-        { section: "A조", name: "김영중", pos: "" }, { section: "A조", name: "김삼동", pos: "" },
-        { section: "A조", name: "김전식", pos: "" },
-        { section: "B조", name: "심규천", pos: "" }, { section: "B조", name: "임종현", pos: "" },
-        { section: "B조", name: "황일범", pos: "" }, { section: "B조", name: "이상길", pos: "" },
-        { section: "B조", name: "권영국", pos: "" }, { section: "B조", name: "전준수", pos: "" },
-        { section: "B조", name: "허용", pos: "" },
-        { section: "C조", name: "황재업", pos: "" }, { section: "C조", name: "이태원", pos: "" },
-        { section: "C조", name: "피재영", pos: "" }, { section: "C조", name: "남형민", pos: "" },
-        { section: "C조", name: "김태언", pos: "" }, { section: "C조", name: "이정석", pos: "" },
-        { section: "C조", name: "강경훈", pos: "" }
-    ];
-
-    function render() {
-        const container = document.getElementById('main-table');
-        let html = '';
-
-        // 1. 지휘부 (카드 넓이 50% 빈칸을 좌우에 배치)
-        const leaders = staffData.filter(d => d.section === "지휘부");
-        html += `<div class="section-row"><div class="tab-cell">지휘부</div><div class="center-grid">
-                    <div class="empty-card"></div>${createCard(leaders[0])}<div class="empty-card"></div>
-                    <div class="empty-card"></div>${createCard(leaders[1])}<div class="empty-card"></div>
-                 </div></div>`;
-
-        // 2. 레이블 (확대 및 칼라)
-        html += `<div style="display:flex; margin-bottom:1px;"><div style="width:48px;"></div>
-                    <div class="grid-area" style="padding:0 4px;">
-                        <div class="label-building label-seongui">성 의 회 관</div><div class="label-building label-omnibus">옴 니 버 스 파 크</div>
-                    </div></div>`;
-
-        // 3. 반장 (카드 넓이 50% 빈칸을 좌우에 배치)
-        const chiefs = staffData.filter(d => d.section === "반장");
-        html += `<div class="section-row"><div class="tab-cell">반장</div><div class="center-grid">
-                    <div class="empty-card"></div>${createCard(chiefs[0])}<div class="empty-card"></div>
-                    <div class="empty-card"></div>${createCard(chiefs[1])}<div class="empty-card"></div>
-                 </div></div>`;
-
-        // 4. A, B, C조 명단
-        ["A조", "B조", "C조"].forEach(g => {
-            const members = staffData.filter(d => d.section === g);
-            html += `<div class="section-row row-${g[0]}"><div class="tab-cell">${g}</div><div class="grid-area">`;
-            for(let i=0; i<8; i++) html += createCard(members[i] || null);
-            html += `</div></div>`;
-        });
-
-        container.innerHTML = html;
-    }
-
-    function createCard(person) {
-        if(!person) return `<div class="empty-card"></div>`;
-        const posLabel = person.pos ? `<span class="pos">${person.pos}</span>` : '';
-        return `<div class="card">${posLabel}<span class="name">${person.name}</span></div>`;
-    }
-
-    render();
-</script>
-</body>
-</html>
