@@ -8,81 +8,79 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
         
-        /* [핵심] 건물 레이블 - 압도적인 크기와 웅장한 디자인 */
+        /* 1. 건물 레이블 - 압도적인 크기로 수정 */
         .label-building { 
-            grid-column: span 2; font-size: 22px; font-weight: 900; 
+            grid-column: span 2; font-size: 24px; font-weight: 900; 
             display: flex; align-items: center; justify-content: center; 
-            height: 56px; border-radius: 10px; margin-bottom: 2px;
-            letter-spacing: 6px;
+            height: 60px; border-radius: 12px; margin-bottom: 4px;
+            letter-spacing: 8px; /* 웅장한 간격 */
         }
-        .bg-sung { background-color: #f3ece3; color: #5d564f; border: 3px solid #e5dbcd; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .bg-omni { background-color: #d9eada; color: #4d5d4d; border: 3px solid #c9decb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .bg-sung { background-color: #f3ece3; color: #5d564f; border: 3px solid #e5dbcd; }
+        .bg-omni { background-color: #d9eada; color: #4d5d4d; border: 3px solid #c9decb; }
 
-        /* 연차 리스트 여백 최소화 */
+        /* 2. 섹션 레이아웃 (여백 최소화) */
         .section-row { 
-            display: flex; background: #fff; border-radius: 10px; 
-            margin-bottom: 4px; overflow: hidden; border: 1px solid #e2e8f0;
+            display: flex; background: #fff; border-radius: 12px; 
+            margin-bottom: 6px; overflow: hidden; border: 1px solid #e2e8f0;
         }
         .tab-cell { 
-            width: 52px; display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: 13px; color: #475569; background: #f1f5f9; flex-shrink: 0;
+            width: 56px; display: flex; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: 14px; color: #475569; background: #f1f5f9; flex-shrink: 0;
         }
-        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 4px; padding: 8px; }
+        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 6px; padding: 10px; }
 
-        /* 이름 카드 */
+        /* 3. 명단 카드 */
         .card { 
-            background: #fff; border-radius: 6px; height: 40px; 
+            background: #fff; border-radius: 8px; height: 42px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             border: 1px solid #f1f5f9;
         }
-        .pos { font-size: 8px; color: #3b82f6; font-weight: 900; margin-bottom: 1px; }
-        .name { font-size: 15.5px; font-weight: 900; color: #1e293b; }
+        .pos { font-size: 8px; color: #2563eb; font-weight: 900; margin-bottom: 1px; }
+        .name { font-size: 16px; font-weight: 900; color: #0f172a; }
 
-        .center-grid { display: grid; grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr 1fr 0.5fr; flex-grow: 1; gap: 4px; padding: 8px; }
+        .center-grid { display: grid; grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr 1fr 0.5fr; flex-grow: 1; gap: 6px; padding: 10px; }
         
         .row-A .tab-cell { background: #dcfce7; }
         .row-B .tab-cell { background: #fef9c3; }
         .row-C .tab-cell { background: #fee2e2; }
     </style>
 </head>
-<body class="p-2">
+<body class="p-3">
     <div class="max-w-md mx-auto">
-        <header class="bg-white rounded-xl shadow-sm border border-gray-200 mb-3 p-3">
-            <div class="flex items-center justify-between mb-3">
+        <header class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-4 p-4">
+            <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-xl">📅</span>
-                    <h1 class="text-lg font-black text-slate-800">보안 연차 현황</h1>
+                    <span class="text-2xl">📅</span>
+                    <h1 class="text-xl font-black text-slate-800">보안 연차 현황</h1>
                 </div>
-                <div class="text-[8px] font-bold text-slate-400">● 연결됨</div>
+                <div class="text-[10px] font-bold text-slate-400">● 연결됨</div>
             </div>
             <div class="flex items-center gap-2 w-full">
-                <div class="flex items-center bg-white border rounded-lg h-10 flex-1">
-                    <button class="px-4 font-bold text-slate-400 text-lg">＜</button>
-                    <span id="monthTitle" class="text-sm font-black text-slate-700 flex-1 text-center">2026년 4월</span>
-                    <button class="px-4 font-bold text-slate-400 text-lg">＞</button>
+                <div class="flex items-center bg-white border border-slate-200 rounded-xl h-12 flex-1">
+                    <button class="px-5 font-bold text-slate-300 text-xl">＜</button>
+                    <span class="text-base font-black text-slate-700 flex-1 text-center">2026년 4월</span>
+                    <button class="px-5 font-bold text-slate-300 text-xl">＞</button>
                 </div>
-                <div class="h-10 bg-slate-100 text-gray-700 rounded-lg font-bold border border-slate-200 flex-1 flex items-center justify-center text-xs">C조 강조</div>
+                <div class="h-12 bg-slate-100 text-gray-700 rounded-xl font-black border border-slate-200 flex-1 flex items-center justify-center text-xs">C조 강조</div>
             </div>
         </header>
 
-        <div class="space-y-1">
-            <div class="section-row">
-                <div class="tab-cell">지휘부</div>
+        <div class="space-y-2">
+            <div class="section-row"><div class="tab-cell">지휘부</div>
                 <div class="center-grid">
                     <div></div><div class="card"><span class="pos">보안소장</span><span class="name">이규용</span></div><div></div>
                     <div></div><div class="card"><span class="pos">부소장</span><span class="name">박상현</span></div><div></div>
                 </div>
             </div>
 
-            <div class="flex"><div style="width:52px;"></div>
-                <div class="grid-area" style="padding:4px 8px; gap:8px;">
-                    <div class="label-building bg-sung">성 의 회 관</div>
-                    <div class="label-building bg-omni">옴 니 버 스 파 크</div>
+            <div class="flex"><div style="width:56px;"></div>
+                <div class="grid-area" style="padding:4px 10px; gap:8px;">
+                    <div class="label-building bg-sung shadow-sm">성 의 회 관</div>
+                    <div class="label-building bg-omni shadow-sm">옴 니 버 스 파 크</div>
                 </div>
             </div>
 
-            <div class="section-row">
-                <div class="tab-cell">반장</div>
+            <div class="section-row"><div class="tab-cell">반장</div>
                 <div class="center-grid">
                     <div></div><div class="card"><span class="name">유정수</span></div><div></div>
                     <div></div><div class="card"><span class="name">오제준</span></div><div></div>
