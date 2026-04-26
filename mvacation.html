@@ -3,78 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>보안 연차 현황</title>
     <style>
         :root { 
-            --bg-gray: #f1f3f5;
+            --calendar-border: #efefef;
+            --text-main: #111;
+            --text-sub: #888;
             --color-seongui: #f3ece3; --color-omnibus: #d9eada;
-            --color-a: #d3f9d8; --color-b: #ffec99; --color-c: #ffc9c9;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; }
-        body { background: var(--bg-gray); padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; letter-spacing: -0.8px; }
+        body { background: #fff; overflow: hidden; } /* 달력처럼 깔끔한 화이트 배경 */
         
-        .app-container { max-width: 600px; margin: 0 auto; min-height: 100vh; background: #fff; }
+        .app-container { max-width: 500px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column; }
 
-        /* [달력 이미지 스타일 복사] 화이트 배경 + 미니멀 타이틀 */
+        /* [핵심] 달력 디자인 그대로 베낀 상단바 */
         .header-bar {
-            background-color: #ffffff;
-            height: 65px;
+            height: 55px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 20px;
-            border-bottom: 1px solid #eeeeee;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--calendar-border);
+            background: #fff;
         }
-        .month-selector {
-            display: flex; align-items: center; gap: 15px; 
-            font-size: 22px; font-weight: 900; color: #212529;
-        }
-        .nav-arrow { color: #ced4da; font-size: 28px; cursor: pointer; text-decoration: none; font-weight: 300; }
-        .header-title { font-size: 17px; font-weight: 900; color: #495057; }
-        .calendar-link { 
-            font-size: 13px; color: #868e96; text-decoration: none; 
-            border: 1px solid #dee2e6; padding: 6px 14px; border-radius: 8px; font-weight: bold;
-        }
+        .month-selector { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 800; color: var(--text-main); }
+        .nav-arrow { color: #ccc; font-size: 24px; cursor: pointer; font-weight: 300; }
+        .header-title { font-size: 16px; font-weight: 700; color: #444; }
+        .calendar-btn { font-size: 13px; color: #777; border: 1px solid #ddd; padding: 5px 12px; border-radius: 6px; text-decoration: none; }
 
-        /* 컨텐츠 영역: 사진처럼 여유로운 여백 */
-        .content { padding: 20px 15px; }
+        /* 압축형 컨텐츠 레이아웃 */
+        .content { padding: 8px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
 
         .section-row { 
-            display: flex; background: #fff; border-radius: 15px; 
-            margin-bottom: 15px; overflow: hidden; border: 1px solid #f1f3f5;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            display: flex; background: #fff; border-radius: 10px; 
+            margin-bottom: 4px; overflow: hidden; border: 1px solid #f2f2f2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         }
         .tab-cell { 
-            width: 65px; display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: 14px; color: #495057; background: #f8f9fa; flex-shrink: 0;
+            width: 45px; display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; font-size: 11px; color: #555; background: #f8f9fa; flex-shrink: 0;
         }
-        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 12px; padding: 15px; }
+        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 6px; padding: 8px; }
 
-        /* 건물 레이블: 확대 및 색상 조화 */
+        /* 건물 배지 */
+        .label-row { display: flex; margin: 2px 0; }
         .label-building { 
-            grid-column: span 2; font-size: 14px; font-weight: 900; 
+            grid-column: span 2; font-size: 12px; font-weight: 800; 
             display: flex; align-items: center; justify-content: center; 
-            height: 38px; border-radius: 8px; margin-bottom: 8px;
+            height: 28px; border-radius: 6px;
         }
-        .label-seongui { background: var(--color-seongui); color: #5d564f; border: 1px solid #e5dbcd; }
+        .label-seongui { background: var(--color-seongui); color: #5d564f; border: 1px solid #e2d7cb; }
         .label-omnibus { background: var(--color-omnibus); color: #4d5d4d; border: 1px solid #c9decb; }
 
-        /* 카드 디자인: 시원하게 확대 */
+        /* 카드 높이 38px로 압축 고정 */
         .card { 
-            background: #fff; border-radius: 12px; height: 55px; 
+            background: #fff; border-radius: 8px; height: 38px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border: 1px solid #f1f3f5; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            border: 1px solid #f0f0f0; width: 100%;
         }
-        .pos { font-size: 9px; color: #339af0; font-weight: bold; margin-bottom: 3px; }
-        .name { font-size: 17px; font-weight: 900; color: #212529; }
+        .pos { font-size: 7.5px; color: #339af0; font-weight: 800; margin-bottom: 1px; }
+        .name { font-size: 14.5px; font-weight: 800; color: #222; }
 
-        /* 중앙 정렬용 그리드 */
-        .center-grid { display: grid; grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr 1fr 0.5fr; flex-grow: 1; gap: 12px; padding: 15px; }
+        /* 지휘부/반장용 중앙 정렬 그리드 */
+        .center-grid { display: grid; grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr 1fr 0.5fr; flex-grow: 1; gap: 6px; padding: 8px; }
 
-        .row-A .tab-cell { background: var(--color-a); }
-        .row-B .tab-cell { background: var(--color-b); }
-        .row-C .tab-cell { background: var(--color-c); }
-        .empty-card { height: 55px; }
+        .row-A .tab-cell { background: #d3f9d8; }
+        .row-B .tab-cell { background: #ffec99; }
+        .row-C .tab-cell { background: #ffc9c9; }
+        .empty-card { height: 38px; }
     </style>
 </head>
 <body>
@@ -87,7 +82,7 @@
             <span class="nav-arrow">〉</span>
         </div>
         <div class="header-title">보안 연차 현황</div>
-        <a href="#" class="calendar-link">근무달력</a>
+        <a href="#" class="calendar-btn">근무달력</a>
     </div>
 
     <div class="content">
@@ -96,8 +91,8 @@
             <div class="empty-card"></div><div class="card"><span class="pos">부소장</span><span class="name">박상현</span></div><div class="empty-card"></div>
         </div></div>
 
-        <div style="display:flex; margin-bottom: 5px;"><div style="width:65px;"></div>
-            <div class="grid-area" style="padding:0 15px;">
+        <div class="label-row"><div style="width:45px;"></div>
+            <div class="grid-area" style="padding:0 8px; gap:6px;">
                 <div class="label-building label-seongui">성 의 회 관</div><div class="label-building label-omnibus">옴 니 버 스 파 크</div>
             </div></div>
 
@@ -106,7 +101,7 @@
             <div class="empty-card"></div><div class="card"><span class="name">오제준</span></div><div class="empty-card"></div>
         </div></div>
 
-        <div id="staff-list"></div>
+        <div id="staff-rows" style="display:contents;"></div>
     </div>
 </div>
 
@@ -116,8 +111,7 @@
         { t: "B조", n: ["심규천","임종현","황일범","이상길","권영국","전준수","허용"] },
         { t: "C조", n: ["황재업","이태원","피재영","남형민","김태언","이정석","강경훈"] }
     ];
-
-    document.getElementById('staff-list').innerHTML = data.map(g => `
+    document.getElementById('staff-rows').innerHTML = data.map(g => `
         <div class="section-row row-${g.t[0]}"><div class="tab-cell">${g.t}</div>
         <div class="grid-area">${Array.from({length:8}, (_,i)=> g.n[i] 
             ? `<div class="card"><span class="name">${g.n[i]}</span></div>` 
