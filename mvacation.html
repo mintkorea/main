@@ -1,74 +1,127 @@
-import streamlit as st
-import json
-
-# 1. 제이슨 스타일 명단 데이터 (하드코딩)
-staff_json = """
-[
-    {"section": "지휘부", "name": "이규용", "pos": "보안소장"},
-    {"section": "지휘부", "name": "박상현", "pos": "부소장"},
-    {"section": "반장", "name": "유정수", "pos": ""},
-    {"section": "반장", "name": "오제준", "pos": ""},
-    {"section": "A조", "name": "배준용", "pos": ""},
-    {"section": "A조", "name": "이명구", "pos": ""},
-    {"section": "A조", "name": "손병휘", "pos": ""},
-    {"section": "A조", "name": "권순호", "pos": ""},
-    {"section": "A조", "name": "김영중", "pos": ""},
-    {"section": "A조", "name": "김삼동", "pos": ""},
-    {"section": "A조", "name": "김전식", "pos": ""},
-    {"section": "B조", "name": "심규천", "pos": ""},
-    {"section": "B조", "name": "임종현", "pos": ""},
-    {"section": "B조", "name": "황일범", "pos": ""},
-    {"section": "B조", "name": "이상길", "pos": ""},
-    {"section": "B조", "name": "권영국", "pos": ""},
-    {"section": "B조", "name": "전준수", "pos": ""},
-    {"section": "B조", "name": "허용", "pos": ""},
-    {"section": "C조", "name": "황재업", "pos": ""},
-    {"section": "C조", "name": "이태원", "pos": ""},
-    {"section": "C조", "name": "피재영", "pos": ""},
-    {"section": "C조", "name": "남형민", "pos": ""},
-    {"section": "C조", "name": "김태언", "pos": ""},
-    {"section": "C조", "name": "이정석", "pos": ""},
-    {"section": "C조", "name": "강경훈", "pos": ""}
-]
-"""
-staff_data = json.loads(staff_json)
-
-# 2. CSS 스타일 설정
-st.markdown("""
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>연차 관리</title>
     <style>
-    .section-row { display: flex; background: #fff; border-radius: 15px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #eee; }
-    .tab-cell { width: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; color: #444; background: #f0f2f6; flex-shrink: 0; text-align: center; }
-    .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 10px; }
-    .label-building { grid-column: span 2; background: #495057; color: #fff; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; height: 22px; border-radius: 5px; margin-bottom: 2px; }
-    .card { background: #fff; border-radius: 10px; height: 45px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #eee; }
-    .pos { font-size: 8px; color: #339af0; font-weight: bold; margin-bottom: 1px; }
-    .name { font-size: 15px; font-weight: bold; color: #212529; }
-    .row-A .tab-cell { background: #d3f9d8; }
-    .row-B .tab-cell { background: #ffec99; }
-    .row-C .tab-cell { background: #ffc9c9; }
-    .empty-card { border: 1px dashed #ccc; background: transparent; }
+        :root { --bg: #f2f4f7; --color-a: #d3f9d8; --color-b: #ffec99; --color-c: #ffc9c9; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; }
+        body { background: var(--bg); padding: 10px; }
+        .app-container { max-width: 800px; margin: 0 auto; }
+        
+        .section-row { 
+            display: flex; background: #fff; border-radius: 18px; 
+            margin-bottom: 12px; overflow: hidden; 
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08); border: 1px solid #eef0f2;
+        }
+        .tab-cell { 
+            width: 65px; display: flex; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: 14px; color: #495057; background: #f1f3f5;
+            flex-shrink: 0; text-align: center;
+        }
+        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 12px; }
+
+        /* [지시] 레이블 스타일 */
+        .label-building { 
+            grid-column: span 2; background: #495057; color: #fff; font-size: 10px; 
+            font-weight: bold; display: flex; align-items: center; justify-content: center; 
+            height: 24px; border-radius: 6px; margin-bottom: 2px;
+        }
+
+        .card { 
+            background: #fff; border-radius: 12px; height: 50px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 1px solid #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .pos { font-size: 9px; color: #339af0; font-weight: bold; margin-bottom: 1px; }
+        .name { font-size: 15px; font-weight: 900; color: #212529; }
+
+        .row-A .tab-cell { background: var(--color-a); }
+        .row-B .tab-cell { background: var(--color-b); }
+        .row-C .tab-cell { background: var(--color-c); }
+        .empty-card { border: 1.2px dashed #ced4da; background: transparent; box-shadow: none; }
     </style>
-""", unsafe_allow_html=True)
+</head>
+<body>
 
-def card_html(person):
-    if not person: return '<div class="card empty-card"></div>'
-    pos = f'<span class="pos">{person["pos"]}</span>' if person["pos"] else ''
-    return f'<div class="card">{pos}<span class="name">{person["name"]}</span></div>'
+<div class="app-container" id="main-table">
+    </div>
 
-# 3. 화면 렌더링
-# 지휘부
-leaders = [p for p in staff_data if p['section'] == '지휘부']
-st.markdown(f'<div class="section-row"><div class="tab-cell">지휘부</div><div class="grid-area">{card_html(leaders[0])}{card_html(leaders[1])}<div class="card empty-card"></div><div class="card empty-card"></div></div></div>', unsafe_allow_html=True)
+<script>
+    // 1. [제이슨 명단 데이터] - 관리 및 수정이 용이하게 구성
+    const staffData = [
+        { section: "지휘부", name: "이규용", pos: "보안소장" },
+        { section: "지휘부", name: "박상현", pos: "부소장" },
+        { section: "반장", name: "유정수", pos: "" },
+        { section: "반장", name: "오제준", pos: "" },
+        { section: "A조", name: "배준용", pos: "" },
+        { section: "A조", name: "이명구", pos: "" },
+        { section: "A조", name: "손병휘", pos: "" },
+        { section: "A조", name: "권순호", pos: "" },
+        { section: "A조", name: "김영중", pos: "" },
+        { section: "A조", name: "김삼동", pos: "" },
+        { section: "A조", name: "김전식", pos: "" },
+        { section: "B조", name: "심규천", pos: "" },
+        { section: "B조", name: "임종현", pos: "" },
+        { section: "B조", name: "황일범", pos: "" },
+        { section: "B조", name: "이상길", pos: "" },
+        { section: "B조", name: "권영국", pos: "" },
+        { section: "B조", name: "전준수", pos: "" },
+        { section: "B조", name: "허용", pos: "" },
+        { section: "C조", name: "황재업", pos: "" },
+        { section: "C조", name: "이태원", pos: "" },
+        { section: "C조", name: "피재영", pos: "" },
+        { section: "C조", name: "남형민", pos: "" },
+        { section: "C조", name: "김태언", pos: "" },
+        { section: "C조", name: "이정석", pos: "" },
+        { section: "C조", name: "강경훈", pos: "" }
+    ];
 
-# 레이블 (반장 위)
-st.markdown('<div style="display: flex; margin-bottom: 2px;"><div style="width: 60px;"></div><div class="grid-area" style="padding: 0 10px;"><div class="label-building">성 의 회 관</div><div class="label-building">옴 니 버 스 파 크</div></div></div>', unsafe_allow_html=True)
+    function render() {
+        const container = document.getElementById('main-table');
+        let html = '';
 
-# 반장
-chiefs = [p for p in staff_data if p['section'] == '반장']
-st.markdown(f'<div class="section-row"><div class="tab-cell">반장</div><div class="grid-area">{card_html(chiefs[0])}<div class="card empty-card"></div>{card_html(chiefs[1])}<div class="card empty-card"></div></div></div>', unsafe_allow_html=True)
+        // [지휘부]
+        const leaders = staffData.filter(d => d.section === "지휘부");
+        html += `<div class="section-row"><div class="tab-cell">지휘부</div><div class="grid-area">
+                    ${createCard(leaders[0])}${createCard(leaders[1])}
+                    ${createCard(null)}${createCard(null)}
+                 </div></div>`;
 
-# 조별 (A, B, C)
-for g in ['A조', 'B조', 'C조']:
-    members = [p for p in staff_data if p['section'] == g]
-    m_html = "".join([card_html(members[i] if i < len(members) else None) for i in range(8)])
-    st.markdown(f'<div class="section-row row-{g[0]}"><div class="tab-cell">{g}</div><div class="grid-area">{m_html}</div></div>', unsafe_allow_html=True)
+        // [지시: 레이블은 반장 바로 위]
+        html += `<div class="section-row" style="background:transparent; border:none; box-shadow:none; margin-bottom:2px;">
+                    <div class="tab-cell" style="background:transparent;"></div>
+                    <div class="grid-area" style="padding:0 12px;">
+                        <div class="label-building">성 의 회 관</div><div class="label-building">옴 니 버 스 파 크</div>
+                    </div></div>`;
+
+        // [반장]
+        const chiefs = staffData.filter(d => d.section === "반장");
+        html += `<div class="section-row"><div class="tab-cell">반장</div><div class="grid-area">
+                    ${createCard(chiefs[0])}${createCard(null)}
+                    ${createCard(chiefs[1])}${createCard(null)}
+                 </div></div>`;
+
+        // [A, B, C조]
+        ["A조", "B조", "C조"].forEach(g => {
+            const members = staffData.filter(d => d.section === g);
+            html += `<div class="section-row row-${g[0]}"><div class="tab-cell">${g}</div><div class="grid-area">`;
+            for(let i=0; i<8; i++) html += createCard(members[i] || null);
+            html += `</div></div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function createCard(person) {
+        if(!person) return `<div class="card empty-card"></div>`;
+        const posLabel = person.pos ? `<span class="pos">${person.pos}</span>` : '';
+        return `<div class="card">${posLabel}<span class="name">${person.name}</span></div>`;
+    }
+
+    render();
+</script>
+
+</body>
+</html>
