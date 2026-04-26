@@ -10,30 +10,34 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         .unified-header { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; padding: 1.25rem; margin-bottom: 1rem; }
-        .section-row { display: flex; background: #fff; border-radius: 8px; margin-bottom: 4px; border: 1px solid #f1f3f5; overflow: hidden; }
-        .tab-cell { width: 48px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; flex-shrink: 0; }
-        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 8px; }
-        .card { background: #fff; border-radius: 6px; height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; border-width: 2.5px !important; width: 100%; }
         
-        /* [중요] 컬러코드 캘린더와 100% 일치 */
-        .border-sung { border-color: #a855f7 !important; }  /* 성의: 보라 */
-        .border-omni { border-color: #16a34a !important; }  /* 옴니: 녹색 (스크린샷 기준) */
-        .border-leader { border-color: #cbd5e1 !important; }
+        /* 섹션 및 그리드 설정 */
+        .section-row { display: flex; background: #fff; border-radius: 8px; margin-bottom: 4px; border: 1px solid #f1f3f5; overflow: hidden; }
+        .tab-cell { width: 48px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; color: #495057; background: #f1f3f5; flex-shrink: 0; }
+        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 8px; }
+        
+        /* 지휘부/반장용 2칸 점유 중앙 정렬 */
+        .span-2-center { grid-column: span 2; display: flex; justify-content: center; align-items: center; }
+        .span-2-center .card { width: 100%; max-width: 150px; }
+
+        .card { background: #fff; border-radius: 6px; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; border-width: 2.5px !important; width: 100%; }
+        
+        /* [지침] 아웃라인 색상 고정 */
+        .border-sung { border-color: #e5dbcd !important; }  /* 회관: 베이지 */
+        .border-omni { border-color: #c9decb !important; }  /* 옴니: 연녹색 */
+        .border-leader { border-color: #cbd5e1 !important; } /* 지휘부: 회색 */
 
         .label-building { font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; height: 34px; border-radius: 6px; width: 100%; }
-        .bg-sung { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #a855f7; }
-        .bg-omni { background-color: #dcfce7; color: #166534; border: 1px solid #16a34a; }
+        .bg-sung { background-color: #f3ece3; color: #5d564f; border: 1px solid #e5dbcd; }
+        .bg-omni { background-color: #d9eada; color: #4d5d4d; border: 1px solid #c9decb; }
 
+        .pos { font-size: 9px; font-weight: 900; color: #64748b; margin-bottom: -2px; }
         .name { font-size: 15px; font-weight: 900; color: #1e293b; }
         .v-badge { position: absolute; top: -6px; right: -4px; background: #ef4444; color: white; font-size: 10px; font-weight: 900; min-width: 18px; height: 18px; border-radius: 9px; display: none; align-items: center; justify-content: center; border: 1.5px solid white; z-index: 10; }
         
-        /* 조별 컬러코드 (A-노랑, B-빨강, C-파랑) */
-        .row-A .tab-cell { background: #fffbeb; color: #d97706; } 
-        .row-B .tab-cell { background: #fef2f2; color: #dc2626; } 
-        .row-C .tab-cell { background: #eff6ff; color: #2563eb; } 
-
-        .badge-group { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 900; color: white; }
-        .badge-A { background-color: #f59e0b; } .badge-B { background-color: #ef4444; } .badge-C { background-color: #3b82f6; }
+        .row-A .tab-cell { background: #d3f9d8; color: #2b8a3e; } 
+        .row-B .tab-cell { background: #fff3bf; color: #e67700; } 
+        .row-C .tab-cell { background: #ffe3e3; color: #c92a2a; } 
 
         #modal, #listModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; padding: 15px; }
         .modal-content { background: white; width: 100%; max-width: 450px; border-radius: 24px; padding: 24px; max-height: 85vh; overflow-y: auto; }
@@ -41,20 +45,39 @@
 </head>
 <body class="p-4">
     <div class="max-w-xl mx-auto">
-        <div class="unified-header text-center">
-            <h1 class="text-xl font-black text-slate-800 mb-4">📅 보안 연차 현황</h1>
+        <div class="unified-header">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2"><h1 class="text-xl font-black text-slate-800">보안 연차 현황</h1></div>
+                <div class="text-[10px] font-bold text-slate-300">● 실시간 연결됨</div>
+            </div>
             <div class="flex gap-2">
                 <select id="monthSelect" class="flex-1 h-12 rounded-xl border border-slate-200 px-4 font-bold text-slate-600 bg-slate-50 outline-none appearance-none" onchange="showMonthlyList()">
                     <option value="">월 선택 (명단확인)</option>
                     <script>for(let i=1; i<=12; i++) document.write(`<option value="${i}">${i}월 연차자</option>`);</script>
                 </select>
-                <a href="calendar.html" class="bg-slate-800 text-white px-6 h-12 rounded-xl font-bold flex items-center shadow-lg">달력보기</a>
+                <a href="calendar.html" class="bg-slate-800 text-white px-6 h-12 rounded-xl font-bold flex items-center shadow-lg">근무달력</a>
             </div>
         </div>
 
-        <div class="flex mb-2 mt-4"><div style="width:48px;"></div><div class="flex flex-grow gap-2 px-2">
-            <div class="label-building bg-sung">성 의 / 의 산 연</div><div class="label-building bg-omni">옴 니 버 스</div>
+        <div class="section-row mb-6">
+            <div class="tab-cell">지휘부</div>
+            <div class="grid-area">
+                <div class="span-2-center"><div class="card border-leader" onclick="openModal('이규용')"><span class="v-badge"></span><span class="pos">보안소장</span><span class="name">이규용</span></div></div>
+                <div class="span-2-center"><div class="card border-leader" onclick="openModal('박상현')"><span class="v-badge"></span><span class="pos">부소장</span><span class="name">박상현</span></div></div>
+            </div>
+        </div>
+
+        <div class="flex mb-2"><div style="width:48px;"></div><div class="flex flex-grow gap-2 px-2">
+            <div class="label-building bg-sung">성 의 회 관</div><div class="label-building bg-omni">옴니버스 파크</div>
         </div></div>
+
+        <div class="section-row mb-4">
+            <div class="tab-cell">반장</div>
+            <div class="grid-area">
+                <div class="span-2-center"><div class="card border-sung" onclick="openModal('유정수')"><span class="v-badge"></span><span class="name">유정수</span></div></div>
+                <div class="span-2-center"><div class="card border-omni" onclick="openModal('오제준')"><span class="v-badge"></span><span class="name">오제준</span></div></div>
+            </div>
+        </div>
 
         <div class="section-row row-A"><div class="tab-cell">A조</div><div class="grid-area" id="group-A"></div></div>
         <div class="section-row row-B"><div class="tab-cell">B조</div><div class="grid-area" id="group-B"></div></div>
@@ -65,29 +88,20 @@
     <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h2 id="modalName" class="font-black text-xl mb-6"></h2><div class="grid grid-cols-3 gap-3" id="monthGrid"></div><button onclick="closeModal()" class="w-full mt-8 py-4 bg-slate-100 rounded-2xl font-bold text-slate-600">닫기</button></div></div>
 
     <script>
-        // [지침 반영] 좌 4명(sung), 우 3명(omni) 구조 절대 고정
+        // [지침 반영] 좌측 4명(sung): 성의/의산연, 우측 3명(omni): 옴니버스 고정
         const members = {
             'A': { sung: ['배준용','이명구','김영중','김삼동'], omni: ['손병휘','권순호','김전식'] },
             'B': { sung: ['심규천','임종현','권영국','전준수'], omni: ['황일범','이상길','허용'] },
             'C': { sung: ['황재업','이태원','김태언','이정석'], omni: ['피재영','남형민','강경훈'] }
         };
 
-        const memberInfo = {};
-        function initMemberInfo() {
-            Object.entries(members).forEach(([group, locs]) => {
-                locs.sung.forEach(n => memberInfo[n] = { group, loc: '성의회관' });
-                locs.omni.forEach(n => memberInfo[n] = { group, loc: '옴니버스' });
-            });
-        }
-        initMemberInfo();
-
         function renderMembers() {
             ['A','B','C'].forEach(g => {
                 const container = document.getElementById(`group-${g}`);
                 let html = '';
-                // 좌측 성의/의산연 4명 배치
+                // 좌측 회관 4명
                 members[g].sung.forEach(n => html += `<div class="card border-sung" onclick="openModal('${n}')"><span class="v-badge"></span><span class="name">${n}</span></div>`);
-                // 우측 옴니버스 3명 배치
+                // 우측 옴니 3명 (빈칸 방지 위해 옴니가 3명이면 4번째 칸은 비움)
                 members[g].omni.forEach(n => html += `<div class="card border-omni" onclick="openModal('${n}')"><span class="v-badge"></span><span class="name">${n}</span></div>`);
                 container.innerHTML = html;
             });
@@ -126,46 +140,6 @@
             });
         }
 
-        function showMonthlyList() {
-            const m = document.getElementById('monthSelect').value;
-            if(!m) return;
-            const mk = `2026-${m.padStart(2,'0')}`;
-            const data = allVData[mk] || {};
-            const dayMap = {};
-            Object.entries(data).forEach(([name, dates]) => {
-                if(!dates.trim()) return;
-                dates.split(',').forEach(d => {
-                    const day = d.trim();
-                    if(!dayMap[day]) dayMap[day] = [];
-                    dayMap[day].push(name);
-                });
-            });
-
-            const sortedDays = Object.keys(dayMap).sort((a,b) => Number(a)-Number(b));
-            let html = `<div class="flex justify-between items-center mb-6"><h2 class="text-xl font-black">${m}월 연차자 명단</h2><button onclick="document.getElementById('listModal').style.display='none'" class="text-slate-400 text-2xl">✕</button></div><div class="space-y-3">`;
-            
-            if(sortedDays.length === 0) {
-                html += `<div class="text-center py-16 text-slate-400 font-bold">등록된 연차가 없습니다.</div>`;
-            } else {
-                sortedDays.forEach(day => {
-                    dayMap[day].forEach(name => {
-                        const info = memberInfo[name] || { group: '-', loc: '-' };
-                        const locBadgeClass = info.loc === '성의회관' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700';
-                        html += `
-                        <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm">
-                            <div class="text-sm font-black text-slate-800 min-w-[50px]">${m}/${day}</div>
-                            <div class="badge-group badge-${info.group}">${info.group}조</div>
-                            <div class="px-2 py-0.5 rounded font-bold text-[10px] ${locBadgeClass}">${info.loc}</div>
-                            <div class="flex-1 text-right font-black text-slate-900">${name}</div>
-                        </div>`;
-                    });
-                });
-            }
-            html += `</div>`;
-            document.getElementById('listContainer').innerHTML = html;
-            document.getElementById('listModal').style.display = 'flex';
-        }
-
         function openModal(name) {
             activeUser = name;
             document.getElementById('modalName').innerText = name + " 연차 설정";
@@ -184,6 +158,25 @@
             await docRef.update({ vocation: allVData });
         }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function showMonthlyList() {
+            const m = document.getElementById('monthSelect').value;
+            if(!m) return;
+            const mk = `2026-${m.padStart(2,'0')}`;
+            const data = allVData[mk] || {};
+            let html = `<div class="flex justify-between items-center mb-6"><h2 class="text-xl font-black">${m}월 연차자 명단</h2><button onclick="document.getElementById('listModal').style.display='none'" class="text-slate-400 text-2xl">✕</button></div><div class="space-y-3">`;
+            let hasData = false;
+            Object.entries(data).forEach(([name, dates]) => {
+                if(dates.trim()) {
+                    html += `<div class="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm"><span class="font-black text-slate-800">${name}</span><span class="text-blue-600 font-black">${dates}</span></div>`;
+                    hasData = true;
+                }
+            });
+            if(!hasData) html += `<div class="text-center py-16 text-slate-400 font-bold">등록된 연차가 없습니다.</div>`;
+            html += `</div>`;
+            document.getElementById('listContainer').innerHTML = html;
+            document.getElementById('listModal').style.display = 'flex';
+        }
     </script>
 </body>
 </html>
