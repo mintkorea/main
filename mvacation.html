@@ -20,13 +20,14 @@
         }
         .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 4px; padding: 6px; }
 
-        /* 건물 레이블 및 카드 아웃라인 칼라 정의 */
+        /* 건물 색상 정의 */
         .bg-sung { background-color: #f3ece3; color: #5d564f; border: 1px solid #e5dbcd; }
         .bg-omni { background-color: #d9eada; color: #4d5d4d; border: 1px solid #c9decb; }
         
-        /* [핵심] 모든 카드에 적용될 아웃라인 */
-        .border-sung { border: 2px solid #e5dbcd !important; }
-        .border-omni { border: 2px solid #c9decb !important; }
+        /* 아웃라인 설정 */
+        .border-leader { border: 2px solid #cbd5e1 !important; } /* 지휘부 통합 회색 */
+        .border-sung { border: 2px solid #e5dbcd !important; } /* 성의회관 베이지 */
+        .border-omni { border: 2px solid #c9decb !important; } /* 옴니버스 그린 */
 
         .label-building { 
             grid-column: span 2; font-size: 15px; font-weight: 900; 
@@ -38,19 +39,14 @@
             background: #fff; border-radius: 5px; height: 34px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .pos { font-size: 7px; color: #3b82f6; font-weight: 800; margin-bottom: 1px; }
+        .pos { font-size: 8px; font-weight: 900; color: #64748b; margin-bottom: 1px; } /* 직책 글자색 중립화 */
         .name { font-size: 14px; font-weight: 900; color: #1e293b; }
 
         .center-grid { display: grid; grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr 1fr 0.5fr; flex-grow: 1; gap: 4px; padding: 6px; }
         
-        /* 조별 탭 칼라 */
         .row-A .tab-cell { background: #d3f9d8; }
         .row-B .tab-cell { background: #ffec99; }
         .row-C .tab-cell { background: #ffc9c9; }
-        
-        /* [요청] 지휘부 소장/부소장 전용 탭 칼라 */
-        .tab-sung { background-color: #f3ece3 !important; color: #5d564f !important; }
-        .tab-omni { background-color: #d9eada !important; color: #4d5d4d !important; }
     </style>
 </head>
 <body class="p-2">
@@ -77,8 +73,8 @@
             <div class="section-row">
                 <div class="tab-cell">지휘부</div>
                 <div class="center-grid">
-                    <div></div><div class="card border-sung"><span class="pos tab-sung px-1 rounded">보안소장</span><span class="name">이규용</span></div><div></div>
-                    <div></div><div class="card border-omni"><span class="pos tab-omni px-1 rounded">부소장</span><span class="name">박상현</span></div><div></div>
+                    <div></div><div class="card border-leader"><span class="pos">보안소장</span><span class="name">이규용</span></div><div></div>
+                    <div></div><div class="card border-leader"><span class="pos">부소장</span><span class="name">박상현</span></div><div></div>
                 </div>
             </div>
 
