@@ -10,12 +10,10 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
-        /* 헤더: 근무달력 버튼 복구 */
         .unified-header { background: white; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; }
         #monthSelect { font-size: 12px !important; font-weight: 700; height: 30px !important; border-radius: 4px; }
         .btn-cal { height: 30px !important; padding: 0 10px !important; font-size: 12px !important; font-weight: 900; border-radius: 4px; background: #1e293b; color: white; display: flex; align-items: center; }
 
-        /* 메인 정렬: 좌우 50% 분할 후 중앙 */
         .section-row { display: flex; background: #fff; border-radius: 6px; margin-bottom: 3px; border: 1px solid #f1f3f5; overflow: hidden; }
         .tab-cell { width: 42px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
         .half-container { display: flex; flex-grow: 1; }
@@ -24,7 +22,6 @@
         .card { border-radius: 4px; height: 36.5px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; border-width: 2px !important; background-color: #fff; width: 85%; max-width: 90px; text-align: center; }
         .name { font-size: 13px; font-weight: 900; color: #1e293b; line-height: 1; }
         
-        /* 조별 격자 */
         .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 4px; padding: 4px; }
         .grid-area .card { width: 100%; max-width: none; }
 
@@ -37,19 +34,22 @@
 
         .v-badge { position: absolute; top: -5px; right: -3px; background: #ef4444; color: white; font-size: 9px; font-weight: 900; min-width: 16px; height: 16px; border-radius: 8px; display: none; align-items: center; justify-content: center; border: 1px solid white; z-index: 10; }
         
-        /* 입력 모달: 3x4 격자 */
+        /* 입력 모달 토글 스타일 */
         #modal, #listModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; padding: 15px; }
         .modal-content { background: white; width: 100%; max-width: 440px; border-radius: 16px; padding: 16px; max-height: 95vh; overflow-y: auto; }
         .month-input-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-        .input-split-box { display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
-        .month-label { background: #f8fafc; text-align: center; font-size: 12px; font-weight: 900; padding: 4px 0; border-bottom: 1px solid #e2e8f0; color: #475569; }
-        .input-area input { width: 100%; height: 35px; text-align: center; font-size: 13px; font-weight: 900; color: #2563eb; border: none; outline: none; }
+        .input-split-box { display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
+        .input-split-box.active { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .month-label { background: #f8fafc; text-align: center; font-size: 12px; font-weight: 900; padding: 6px 0; border-bottom: 1px solid #e2e8f0; color: #475569; }
+        .input-split-box.active .month-label { background: #eff6ff; color: #2563eb; }
+        .input-area input { width: 100%; height: 35px; text-align: center; font-size: 13px; font-weight: 900; color: #2563eb; border: none; outline: none; background: #fff; cursor: pointer; }
+        .input-area input:disabled { background: #fff; color: #94a3b8; }
 
-        /* 리스트: 왼쪽 정렬 꽉꽉 */
-        .list-item { display: flex; align-items: center; gap: 5px; padding: 8px 6px; background: white; border-bottom: 1px solid #f1f3f5; font-size: 12px; font-weight: 900; text-align: left; }
+        /* 리스트 정렬 */
+        .list-item { display: flex; align-items: center; gap: 6px; padding: 10px 8px; background: white; border-bottom: 1px solid #f1f3f5; font-size: 12px; font-weight: 900; text-align: left; }
         .badge-date { color: #2563eb; min-width: 65px; }
         .badge-g { padding: 1px 4px; border-radius: 3px; color: white; min-width: 18px; text-align: center; }
-        .badge-b { padding: 2px 5px; border-radius: 3px; color: white; white-space: nowrap; }
+        .badge-b { padding: 2px 5px; border-radius: 3px; color: white; margin-right: 4px; }
     </style>
 </head>
 <body class="p-2">
@@ -94,7 +94,7 @@
     <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()">
         <h2 id="modalName" class="font-black text-lg mb-4 text-center border-b pb-2"></h2>
         <div class="month-input-grid" id="monthGrid"></div>
-        <button onclick="saveAllAndClose()" class="w-full mt-6 py-3 bg-blue-600 text-white rounded-xl font-black text-sm shadow-lg">전체 저장 및 닫기</button>
+        <button onclick="saveAllAndClose()" class="w-full mt-6 py-3 bg-blue-600 text-white rounded-xl font-black text-sm shadow-lg">저장 및 닫기</button>
     </div></div>
 
     <div id="listModal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()">
@@ -153,12 +153,22 @@
                 const mk = `2026-${String(i).padStart(2,'0')}`;
                 const val = allVData[mk]?.[activeUser] || "";
                 grid.innerHTML += `
-                <div class="input-split-box">
+                <div class="input-split-box" id="box-${mk}" onclick="toggleInput('${mk}')">
                     <div class="month-label">${i}월</div>
-                    <div class="input-area"><input type="text" id="minput-${mk}" value="${val}" placeholder="일자입력"></div>
+                    <div class="input-area"><input type="text" id="minput-${mk}" value="${val}" disabled></div>
                 </div>`;
             }
             document.getElementById('modal').style.display = 'flex';
+        }
+
+        function toggleInput(mk) {
+            const box = document.getElementById(`box-${mk}`);
+            const input = document.getElementById(`minput-${mk}`);
+            if(input.disabled) {
+                input.disabled = false; box.classList.add('active'); input.focus();
+            } else {
+                input.disabled = true; box.classList.remove('active');
+            }
         }
 
         async function saveAllAndClose() {
