@@ -79,9 +79,10 @@
     </div>
 
     <div id="listModal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><div id="listContainer"></div></div></div>
-    <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h2 id="modalName" class="font-black text-lg mb-4"></h2><div class="grid grid-cols-3 gap-3" id="monthGrid"></div><button onclick="closeModal()" class="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl font-bold">닫기</button></div></div>
+    <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h2 id="modalName" class="font-black text-lg mb-4 text-slate-800"></h2><div class="grid grid-cols-3 gap-3" id="monthGrid"></div><button onclick="closeModal()" class="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl font-bold">닫기</button></div></div>
 
     <script>
+        // 사진의 순서와 건물 속성을 정확히 반영한 데이터
         const members = {
             'A': [{n:'배준용',t:'sung'}, {n:'이명구',t:'sung'}, {n:'손병휘',t:'omni'}, {n:'권순호',t:'omni'}, {n:'김영중',t:'sung'}, {n:'김삼동',t:'sung'}, {n:'김전식',t:'omni'}],
             'B': [{n:'심규천',t:'sung'}, {n:'임종현',t:'sung'}, {n:'황일범',t:'omni'}, {n:'이상길',t:'omni'}, {n:'권영국',t:'sung'}, {n:'전준수',t:'sung'}, {n:'허용',t:'omni'}],
@@ -101,7 +102,14 @@
         }
         renderMembers();
 
-        const firebaseConfig = { apiKey: "AIzaSyAu38FXMBUgoeYy1GDViTetsJ68ivHsGyM", authDomain: "catholic-security-system.firebaseapp.com", projectId: "catholic-security-system", storageBucket: "catholic-security-system.firebasestorage.app", messagingSenderId: "978946205343", appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa" };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAu38FXMBUgoeYy1GDViTetsJ68ivHsGyM",
+            authDomain: "catholic-security-system.firebaseapp.com",
+            projectId: "catholic-security-system",
+            storageBucket: "catholic-security-system.firebasestorage.app",
+            messagingSenderId: "978946205343",
+            appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa"
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const docRef = db.collection("vacation_system").doc("data");
@@ -148,20 +156,13 @@
             let hasData = false;
             Object.entries(data).forEach(([name, dates]) => {
                 if(dates.trim()) {
-                    const mData = Object.values(members).flat().find(x=>x.n===name);
-                    const isSung = mData?.t === 'sung' || name === '유정수' || name === '이규용';
-                    const group = Object.keys(members).find(k => members[k].some(x => x.n === name)) || "-";
-                    html += `<div class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span class="text-blue-600 font-black min-w-[45px]">${dates}</span>
-                        <span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">${group}</span>
-                        <span class="${isSung?'bg-purple-100 text-purple-700':'bg-green-100 text-green-700'} text-[10px] px-1.5 py-0.5 rounded font-bold">${isSung?'회관':'옴니'}</span>
-                        <span class="flex-1 text-right font-black text-slate-800">${name}</span>
-                    </div>`;
+                    html += `<div class="flex justify-between p-3 bg-slate-50 rounded-lg"><span class="font-bold">${name}</span><span class="text-blue-600 font-medium">${dates}</span></div>`;
                     hasData = true;
                 }
             });
-            if(!hasData) html += `<div class="text-center py-10 text-slate-400">데이터가 없습니다.</div>`;
-            document.getElementById('listContainer').innerHTML = html + `</div><button onclick="document.getElementById('listModal').style.display='none'" class="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>`;
+            if(!hasData) html += `<div class="text-center py-10 text-slate-400">등록된 연차가 없습니다.</div>`;
+            html += `</div><button onclick="document.getElementById('listModal').style.display='none'" class="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>`;
+            document.getElementById('listContainer').innerHTML = html;
             document.getElementById('listModal').style.display = 'flex';
         }
     </script>
