@@ -9,60 +9,67 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
+        .unified-header { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; padding: 1.25rem; margin-bottom: 1rem; }
+        .section-row { display: flex; background: #fff; border-radius: 8px; margin-bottom: 4px; border: 1px solid #f1f3f5; overflow: hidden; }
+        .tab-cell { width: 48px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; color: #495057; background: #f1f3f5; flex-shrink: 0; }
+        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 8px; }
         
-        /* 헤더 디자인: 스크린샷 반영 */
-        .unified-header { background: white; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); padding: 1.5rem; margin-bottom: 1.5rem; }
-        
-        /* 섹션 레이아웃 */
-        .section-row { display: flex; background: #fff; border-radius: 12px; margin-bottom: 8px; border: 1px solid #f1f3f5; overflow: hidden; }
-        .tab-cell { width: 48px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0; }
-        
-        /* [중요] 한 조당 2행 4열 그리드 고정 */
-        .grid-area { display: grid; grid-template-columns: repeat(4, 1fr); flex-grow: 1; gap: 8px; padding: 10px; }
+        /* 지휘부/반장용 중앙 정렬 */
+        .span-2-center { grid-column: span 2; display: flex; justify-content: center; align-items: center; }
+        .span-2-center .card { width: 100%; max-width: 130px; } 
 
-        .card { background: #fff; border-radius: 8px; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; border-width: 2.5px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        
-        /* 테두리 컬러: 성의(베이지), 옴니(연녹색), 지휘부(그레이) */
+        .card { background: #fff; border-radius: 6px; height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; border-width: 2.5px !important; }
         .border-sung { border-color: #e5dbcd !important; } 
         .border-omni { border-color: #c9decb !important; } 
         .border-leader { border-color: #cbd5e1 !important; }
 
-        .name { font-size: 15px; font-weight: 900; color: #1e293b; }
-        .pos { font-size: 9px; font-weight: 900; color: #64748b; margin-bottom: -1px; }
-        .v-badge { position: absolute; top: -8px; right: -6px; background: #ef4444; color: white; font-size: 10px; font-weight: 900; min-width: 20px; height: 20px; border-radius: 10px; display: none; align-items: center; justify-content: center; border: 2px solid white; z-index: 10; }
-        
-        /* 조별 컬러: 스크린샷 기준 */
-        .row-A .tab-cell { background: #dcfce7; color: #166534; } 
-        .row-B .tab-cell { background: #fef9c3; color: #854d0e; } 
-        .row-C .tab-cell { background: #fee2e2; color: #991b1b; } 
+        /* 건물 레이블 복구 */
+        .label-building { font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; height: 34px; border-radius: 6px; width: 100%; }
+        .bg-sung { background-color: #f3ece3; color: #5d564f; border: 1px solid #e5dbcd; }
+        .bg-omni { background-color: #d9eada; color: #4d5d4d; border: 1px solid #c9decb; }
 
-        #modal, #listModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 15px; }
-        .modal-content { background: white; width: 100%; max-width: 450px; border-radius: 24px; padding: 24px; max-height: 80vh; overflow-y: auto; }
+        .pos { font-size: 8px; font-weight: 900; color: #64748b; margin-bottom: -1px; }
+        .name { font-size: 15px; font-weight: 900; color: #1e293b; }
+        .v-badge { position: absolute; top: -6px; right: -4px; background: #ef4444; color: white; font-size: 10px; font-weight: 900; min-width: 18px; height: 18px; border-radius: 9px; display: none; align-items: center; justify-content: center; border: 1.5px solid white; z-index: 10; }
+        
+        .row-A .tab-cell { background: #d3f9d8; }
+        .row-B .tab-cell { background: #ffec99; }
+        .row-C .tab-cell { background: #ffc9c9; }
+
+        #modal, #listModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; padding: 15px; }
+        .modal-content { background: white; width: 100%; max-width: 420px; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
     </style>
 </head>
 <body class="p-4">
     <div class="max-w-xl mx-auto">
-        <div class="unified-header">
-            <div class="flex items-center gap-3 mb-6">
-                <img src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" class="w-8 h-8">
-                <h1 class="text-xl font-black text-slate-800">보안 연차 현황</h1>
-            </div>
-            <div class="flex gap-3">
-                <select id="monthSelect" class="flex-1 h-12 rounded-xl border border-slate-200 px-4 font-bold text-slate-600 bg-slate-50 outline-none appearance-none" onchange="showMonthlyList()">
+        <div class="unified-header text-center">
+            <h1 class="text-xl font-black text-slate-800 mb-4">📅 보안 연차 현황</h1>
+            <div class="flex gap-2">
+                <select id="monthSelect" class="flex-1 h-10 rounded-lg border border-slate-200 px-3 font-bold text-slate-600 bg-slate-50 outline-none" onchange="showMonthlyList()">
                     <option value="">월 선택 (명단확인)</option>
                     <script>for(let i=1; i<=12; i++) document.write(`<option value="${i}">${i}월 연차자</option>`);</script>
                 </select>
-                <a href="calendar.html" class="bg-slate-800 text-white px-6 h-12 rounded-xl font-bold flex items-center shadow-md">근무달력</a>
+                <a href="calendar.html" class="bg-slate-800 text-white px-5 h-10 rounded-lg font-bold text-sm flex items-center shadow-sm">근무달력</a>
             </div>
         </div>
 
-        <div class="section-row mb-4">
-            <div class="tab-cell">관리</div>
+        <div class="section-row">
+            <div class="tab-cell">지휘부</div>
             <div class="grid-area">
-                <div class="card border-leader" onclick="openModal('이규용')"><span class="pos">소장</span><span class="name">이규용</span></div>
-                <div class="card border-leader" onclick="openModal('박상현')"><span class="pos">부소장</span><span class="name">박상현</span></div>
-                <div class="card border-sung" onclick="openModal('유정수')"><span class="pos">반장</span><span class="name">유정수</span></div>
-                <div class="card border-omni" onclick="openModal('오제준')"><span class="pos">반장</span><span class="name">오제준</span></div>
+                <div class="span-2-center"><div class="card border-leader" onclick="openModal('이규용')"><span class="v-badge"></span><span class="pos">보안소장</span><span class="name">이규용</span></div></div>
+                <div class="span-2-center"><div class="card border-leader" onclick="openModal('박상현')"><span class="v-badge"></span><span class="pos">부소장</span><span class="name">박상현</span></div></div>
+            </div>
+        </div>
+
+        <div class="flex mb-2 mt-2"><div style="width:48px;"></div><div class="flex flex-grow gap-2 px-2">
+            <div class="label-building bg-sung">성 의 회 관</div><div class="label-building bg-omni">옴니버스 파크</div>
+        </div></div>
+
+        <div class="section-row">
+            <div class="tab-cell">반장</div>
+            <div class="grid-area">
+                <div class="span-2-center"><div class="card border-sung" onclick="openModal('유정수')"><span class="v-badge"></span><span class="name">유정수</span></div></div>
+                <div class="span-2-center"><div class="card border-omni" onclick="openModal('오제준')"><span class="v-badge"></span><span class="name">오제준</span></div></div>
             </div>
         </div>
 
@@ -72,24 +79,13 @@
     </div>
 
     <div id="listModal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><div id="listContainer"></div></div></div>
-    
-    <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h2 id="modalName" class="font-black text-xl mb-6 text-center"></h2><div class="grid grid-cols-3 gap-3" id="monthGrid"></div><button onclick="closeModal()" class="w-full mt-6 py-4 bg-slate-800 text-white rounded-2xl font-bold text-lg shadow-lg">저장 및 닫기</button></div></div>
+    <div id="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h2 id="modalName" class="font-black text-lg mb-4"></h2><div class="grid grid-cols-3 gap-3" id="monthGrid"></div><button onclick="closeModal()" class="w-full mt-6 py-3 bg-slate-100 rounded-xl font-bold">닫기</button></div></div>
 
     <script>
-        // 비상연락망 이미지 순서 및 건물 구분 (회관-회관-옴니-옴니 구조)
         const members = {
-            'A': [
-                {name:'배준용', type:'sung'}, {name:'이명구', type:'sung'}, {name:'손병휘', type:'omni'}, {name:'권순호', type:'omni'},
-                {name:'김영중', type:'sung'}, {name:'김삼동', type:'sung'}, {name:'김전식', type:'omni'}
-            ],
-            'B': [
-                {name:'심규천', type:'sung'}, {name:'임종현', type:'sung'}, {name:'황일범', type:'omni'}, {name:'이상길', type:'omni'},
-                {name:'권영국', type:'sung'}, {name:'전준수', type:'sung'}, {name:'허용', type:'omni'}
-            ],
-            'C': [
-                {name:'황재업', type:'sung'}, {name:'이태원', type:'sung'}, {name:'피재영', type:'omni'}, {name:'남형민', type:'omni'},
-                {name:'김태언', type:'sung'}, {name:'이정석', type:'sung'}, {name:'강경훈', type:'omni'}
-            ]
+            'A': [{n:'배준용',t:'sung'}, {n:'이명구',t:'sung'}, {n:'손병휘',t:'omni'}, {n:'권순호',t:'omni'}, {n:'김영중',t:'sung'}, {n:'김삼동',t:'sung'}, {n:'김전식',t:'omni'}],
+            'B': [{n:'심규천',t:'sung'}, {n:'임종현',t:'sung'}, {n:'황일범',t:'omni'}, {n:'이상길',t:'omni'}, {n:'권영국',t:'sung'}, {n:'전준수',t:'sung'}, {n:'허용',t:'omni'}],
+            'C': [{n:'황재업',t:'sung'}, {n:'이태원',t:'sung'}, {n:'피재영',t:'omni'}, {n:'남형민',t:'omni'}, {n:'김태언',t:'sung'}, {n:'이정석',t:'sung'}, {n:'강경훈',t:'omni'}]
         };
 
         function renderMembers() {
@@ -97,27 +93,20 @@
                 const container = document.getElementById(`group-${g}`);
                 let html = '';
                 members[g].forEach(m => {
-                    const borderClass = m.type === 'sung' ? 'border-sung' : 'border-omni';
-                    html += `<div class="card ${borderClass}" onclick="openModal('${m.name}')"><span class="v-badge"></span><span class="name">${m.name}</span></div>`;
+                    const bc = m.t === 'sung' ? 'border-sung' : 'border-omni';
+                    html += `<div class="card ${bc}" onclick="openModal('${m.n}')"><span class="v-badge"></span><span class="name">${m.n}</span></div>`;
                 });
                 container.innerHTML = html;
             });
         }
         renderMembers();
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAu38FXMBUgoeYy1GDViTetsJ68ivHsGyM",
-            authDomain: "catholic-security-system.firebaseapp.com",
-            projectId: "catholic-security-system",
-            storageBucket: "catholic-security-system.firebasestorage.app",
-            messagingSenderId: "978946205343",
-            appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa"
-        };
+        // Firebase 설정 및 연차 로직 유지...
+        const firebaseConfig = { apiKey: "AIzaSyAu38FXMBUgoeYy1GDViTetsJ68ivHsGyM", authDomain: "catholic-security-system.firebaseapp.com", projectId: "catholic-security-system", storageBucket: "catholic-security-system.firebasestorage.app", messagingSenderId: "978946205343", appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const docRef = db.collection("vacation_system").doc("data");
-        let allVData = {};
-        let activeUser = "";
+        let allVData = {}; let activeUser = "";
 
         docRef.onSnapshot(doc => { if (doc.exists) { allVData = doc.data().vocation || {}; updateMainBadges(); } });
 
@@ -137,36 +126,6 @@
             });
         }
 
-        function showMonthlyList() {
-            const m = document.getElementById('monthSelect').value;
-            if(!m) return;
-            const mk = `2026-${m.padStart(2,'0')}`;
-            const data = allVData[mk] || {};
-            
-            let html = `<div class="flex justify-between items-center mb-6"><h2 class="text-xl font-black text-slate-800">${m}월 연차자 명단</h2><button onclick="document.getElementById('listModal').style.display='none'" class="text-3xl text-slate-300">✕</button></div><div class="space-y-3">`;
-            
-            let hasData = false;
-            Object.entries(data).sort().forEach(([name, dates]) => {
-                if(!dates.trim()) return;
-                hasData = true;
-                const mData = Object.values(members).flat().find(m => m.name === name);
-                const building = mData?.type === 'sung' ? "성의회관" : "옴니버스";
-                const group = Object.keys(members).find(k => members[k].some(m => m.name === name)) || "-";
-                
-                html += `
-                <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <span class="text-blue-600 font-black text-lg min-w-[55px]">${dates}</span>
-                    <span class="bg-red-500 text-white text-[11px] px-2 py-0.5 rounded-lg font-bold">${group}</span>
-                    <span class="${building==='성의회관'?'bg-purple-100 text-purple-700':'bg-orange-100 text-orange-700'} text-[11px] px-2 py-0.5 rounded-lg font-bold">${building==='성의회관'?'회관':'옴니'}</span>
-                    <span class="flex-1 text-right font-black text-slate-800 text-lg">${name}</span>
-                </div>`;
-            });
-
-            if(!hasData) html += `<div class="text-center py-20 text-slate-400 font-bold">등록된 연차가 없습니다.</div>`;
-            document.getElementById('listContainer').innerHTML = html + `</div>`;
-            document.getElementById('listModal').style.display = 'flex';
-        }
-
         function openModal(name) {
             activeUser = name;
             document.getElementById('modalName').innerText = name + " 연차 설정";
@@ -174,17 +133,37 @@
             for(let i=1; i<=12; i++) {
                 const mk = `2026-${String(i).padStart(2,'0')}`;
                 const val = allVData[mk]?.[activeUser] || "";
-                grid.innerHTML += `<div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center"><div class="text-[11px] font-bold text-slate-400 mb-1">${i}월</div><input type="text" class="w-full text-center font-bold text-blue-600 outline-none bg-transparent" value="${val}" onchange="saveData('${mk}', this.value)"></div>`;
+                grid.innerHTML += `<div class="bg-slate-50 p-2 rounded-lg text-center"><div class="text-[10px] font-bold text-slate-400">${i}월</div><input type="text" class="w-full text-center font-bold text-blue-600 outline-none bg-transparent" value="${val}" onchange="saveData('${mk}', this.value)"></div>`;
             }
             document.getElementById('modal').style.display = 'flex';
         }
 
-        async function saveData(mk, val) {
-            if(!allVData[mk]) allVData[mk] = {};
-            allVData[mk][activeUser] = val;
-            await docRef.update({ vocation: allVData });
-        }
+        async function saveData(mk, val) { if(!allVData[mk]) allVData[mk] = {}; allVData[mk][activeUser] = val; await docRef.update({ vocation: allVData }); }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function showMonthlyList() {
+            const m = document.getElementById('monthSelect').value; if(!m) return;
+            const mk = `2026-${m.padStart(2,'0')}`;
+            const data = allVData[mk] || {};
+            let html = `<h2 class="text-lg font-black mb-4">${m}월 연차자 명단</h2><div class="space-y-2">`;
+            let hasData = false;
+            Object.entries(data).forEach(([name, dates]) => {
+                if(dates.trim()) {
+                    const isSung = Object.values(members).flat().find(x=>x.n===name)?.t === 'sung' || name === '유정수' || name === '이규용';
+                    const group = Object.keys(members).find(k => members[k].some(x => x.n === name)) || "-";
+                    html += `<div class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-blue-600 font-black min-w-[45px]">${dates}</span>
+                        <span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">${group}</span>
+                        <span class="${isSung?'bg-purple-100 text-purple-700':'bg-green-100 text-green-700'} text-[10px] px-1.5 py-0.5 rounded font-bold">${isSung?'회관':'옴니'}</span>
+                        <span class="flex-1 text-right font-black text-slate-800">${name}</span>
+                    </div>`;
+                    hasData = true;
+                }
+            });
+            if(!hasData) html += `<div class="text-center py-10 text-slate-400">데이터가 없습니다.</div>`;
+            document.getElementById('listContainer').innerHTML = html + `</div><button onclick="document.getElementById('listModal').style.display='none'" class="w-full mt-6 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>`;
+            document.getElementById('listModal').style.display = 'flex';
+        }
     </script>
 </body>
 </html>
