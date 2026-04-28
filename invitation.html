@@ -1,8 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- [중요] 카카오톡/문자 썸네일(오픈 그래프) 설정 -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="전준수 체육관 오픈행사 초대장">
+    <meta property="og:description" content="30년 만의 새로운 시작, 자리를 빛내주세요.">
+    <meta property="og:image" content="이미지_경로_주소.jpg"> <!-- 실제 온라인에 올린 이미지 주소를 넣어야 합니다 -->
+    <meta property="og:url" content="실제_웹사이트_주소.html">
+
     <title>체육관 오픈행사 초대장</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,17 +66,13 @@
         }
         .highlight { color: var(--accent); font-weight: 900; }
 
-        /* 이미지 컨테이너 디자인 개선 */
         .img-container {
             width: 100%; flex: 1; margin: 20px 0; border-radius: 15px;
             overflow: hidden; display: flex; align-items: center; justify-content: center;
             position: relative; transition: all 0.3s ease;
         }
         
-        /* 사진이 없을 때의 스타일 */
         .img-container.empty { border: 2px dashed #cbd5e0; background: #f8fafc; cursor: pointer; }
-        
-        /* 사진이 있을 때의 스타일 */
         .img-container.filled { border: none; background: #000; cursor: zoom-in; }
 
         .img-container img {
@@ -77,14 +82,12 @@
         .img-placeholder { text-align: center; color: #a0aec0; }
         .img-placeholder i { font-size: 3rem; margin-bottom: 10px; }
 
-        /* 계좌 카드 */
         .copy-card {
             background: #f8fafc; padding: 20px; border-radius: 15px;
             border: 2px solid var(--primary); text-align: center; margin-top: 10px;
         }
         .account-num { display: block; font-size: 1.5rem; color: var(--accent); font-weight: 900; margin: 5px 0; }
 
-        /* 컨트롤 패널 */
         .controls {
             position: absolute; bottom: 30px; left: 0; width: 100%;
             display: flex; align-items: center; justify-content: center; gap: 30px; z-index: 30;
@@ -99,7 +102,6 @@
         .progress-container { position: absolute; bottom: 20px; left: 60px; right: 60px; height: 4px; background: #e2e8f0; z-index: 25; }
         .progress-bar { height: 100%; width: 0%; background: var(--accent); }
 
-        /* 확대 모달 (라이트박스) */
         #imageModal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center;
@@ -210,7 +212,6 @@
     <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
 </div>
 
-<!-- 확대용 모달 -->
 <div id="imageModal" onclick="closeModal()">
     <img id="modalImg" src="">
     <div class="close-hint">화면을 다시 터치하면 닫힙니다</div>
@@ -225,8 +226,6 @@
     const duration = 8000;
     let startTime = Date.now();
     let pausedTime = 0;
-
-    // 사진 상태 추적용 (사진이 들어갔는지 여부)
     let hasImage = [false, false, false];
 
     function updateSlide() {
@@ -253,14 +252,11 @@
         requestAnimationFrame(animate);
     }
 
-    // 사진 영역 클릭 시 동작 분기
     function handleImageClick(idx) {
         if (hasImage[idx]) {
-            // 사진이 있으면 확대
             const imgSrc = document.getElementById('img' + idx).src;
             openModal(imgSrc);
         } else {
-            // 사진이 없으면 파일 업로드창 열기
             document.getElementById('input' + idx).click();
         }
     }
@@ -273,7 +269,6 @@
             const img = document.getElementById('img' + idx);
             const container = document.getElementById('container' + idx);
             const placeholder = document.getElementById('placeholder' + idx);
-            
             img.src = reader.result;
             img.style.display = 'block';
             placeholder.style.display = 'none';
@@ -284,16 +279,15 @@
         reader.readAsDataURL(file);
     }
 
-    // 확대 모달 기능
     function openModal(src) {
-        isPlaying = false; // 확대 시 자동 슬라이드 멈춤
+        isPlaying = false;
         document.getElementById('modalImg').src = src;
         document.getElementById('imageModal').style.display = 'flex';
     }
 
     function closeModal() {
         document.getElementById('imageModal').style.display = 'none';
-        isPlaying = true; // 닫으면 다시 재생
+        isPlaying = true;
         startTime = Date.now();
     }
 
@@ -301,7 +295,6 @@
         const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
         const toast = document.getElementById('toast'); toast.style.display = 'block'; setTimeout(() => toast.style.display = 'none', 2000);
     }
-
     requestAnimationFrame(animate);
 </script>
 </body>
