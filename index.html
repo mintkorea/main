@@ -55,11 +55,14 @@
         .bg-shift-B { background-color: #EF4444; }
         .bg-shift-C { background-color: #3B82F6; }
 
-        .building-badge { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 5px; display: inline-block; margin-bottom: 8px; }
-        .badge-hall { background-color: #dbeafe; color: #1e40af; }
-        .badge-research { background-color: #f3e8ff; color: #6b21a8; }
-        .event-item { font-size: 13px; font-weight: 800; margin-bottom: 10px; display: block; line-height: 1.5; }
-        .event-place { color: #3b82f6; font-weight: 900; margin-right: 4px; } 
+        /* [image_4.png 기반 디자인 수정] */
+        .building-badge { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 10px; }
+        .badge-hall { background-color: #E0F2FE; color: #0369A1; } /* 성의회관 뱃지 */
+        .badge-research { background-color: #F3E8FF; color: #7E22CE; } /* 의산연 뱃지 */
+        
+        .event-item { font-size: 13.5px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 4px; line-height: 1.4; color: #1e293b; }
+        .event-item span { flex-grow: 1; }
+        .event-place-pin { flex-shrink: 0; margin-top: 1px; }
 
         .meal-row { display: flex; align-items: center; padding: 7px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; }
         .meal-type { font-size: 13px; font-weight: 900; color: #94a3b8; width: 30px; }
@@ -112,8 +115,7 @@
 
         <div onclick="navigateTo('rentalm.html')" class="table-card">
             <div class="table-header label-event">오늘<br>행사</div>
-            <div id="event-list" class="table-body"></div>
-        </div>
+            <div id="event-list" class="table-body pt-3 pb-1"></div> </div>
 
         <div onclick="navigateTo('meal.html')" class="table-card">
             <div class="table-header label-meal">오늘<br>식단</div>
@@ -226,20 +228,71 @@
 
         async function updateEvents(date) {
             const ds = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-            const c = Cache.get('events_all');
-            if (c) renderEventUI(c, ds);
+            const cachedData = Cache.get('events_all');
+            if (cachedData) renderEventUI(cachedData, ds);
+
             try {
-                const res = await fetch(EVENT_API); const data = await res.json();
-                Cache.save('events_all', data); renderEventUI(data, ds);
-            } catch(e) { if(!c) document.getElementById('event-list').innerHTML = "오프라인 상태"; }
+                const res = await fetch(`${EVENT_API}?date=${ds}`); 
+                const json = await res.json();
+                const actualData = json.rentals || [];
+                
+                Cache.save('events_all', actualData); 
+                renderEventUI(actualData, ds);
+            } catch(e) { 
+                if(!cachedData) document.getElementById('event-list').innerHTML = `<div class="text-xs text-slate-300 ml-1">오프라인 상태 (데이터 로드 실패)</div>`; 
+            }
         }
 
+        /* [image_4.png 기반 핵심 수정 - renderEventUI 함수 전체 교체] */
         function renderEventUI(data, ds) {
-            const f = data.filter(r => r.rawDate === ds);
-            const h = f.filter(r => r.bu.includes("성의회관") || r.place.includes("성의회관"));
-            const r_f = f.filter(r => r.bu.includes("의산연") || r.place.includes("의산연") || r.bu.includes("의생명") || r.place.includes("의생명"));
-            const fmt = (p) => p ? p.replace("성의교정", "").trim() : "장소미정";
-            document.getElementById('event-list').innerHTML = `<div class="mb-4"><span class="building-badge badge-hall">성의회관</span>${h.length?h.map(i=>`<div class="event-item"><span class="event-place">📍 ${fmt(i.place)}</span><span>${i.event}</span></div>`).join(''):'<div class="text-xs text-slate-300 ml-1">행사 없음</div>'}</div><div><span class="building-badge badge-research">의산연</span>${r_f.length?r_f.map(i=>`<div class="event-item"><span class="event-place text-purple-500">📍 ${fmt(i.place)}</span><span>${i.event}</span></div>`).join(''):'<div class="text-xs text-slate-300 ml-1">행사 없음</div>'}</div>`;
+            const eventArray = Array.isArray(data) ? data : (data.rentals || []);
+            
+            // 건물별 데이터 분류
+            const h = eventArray.filter(r => r.bu.includes("성의회관") || r.place.includes("성의회관"));
+            const r_f = eventArray.filter(r => r.bu.includes("의산연") || r.place.includes("의산연") || r.bu.includes("의생명") || r.place.includes("의생명"));
+            
+            // 장소 포맷 함수 ("📍 505호(소피아의 방)")
+            const fmtPlace = (place) => {
+                if(!place) return '<span class="event-place-pin">📍</span><span class="font-black text-slate-500 ml-1">장소미정</span>';
+                const cleanPlace = place.replace("성의교정", "").trim();
+                return `<span class="event-place-pin">📍</span><span class="font-black text-[#0369A1] ml-1">${cleanPlace}</span>`;
+            };
+
+            let html = "";
+            
+            // [성의회관 영역]
+            if(h.length > 0) {
+                html += `
+                    <div class="mb-5">
+                        <span class="building-badge badge-hall">성의회관</span>
+                        ${h.map(i => `
+                            <div class="event-item">
+                                ${fmtPlace(i.place)}
+                                <span>${i.event}</span>
+                            </div>`).join('')}
+                    </div>`;
+            }
+
+            // [의산연 영역]
+            if(r_f.length > 0) {
+                html += `
+                    <div>
+                        <span class="building-badge badge-research">의산연</span>
+                        ${r_f.map(i => `
+                            <div class="event-item">
+                                <span class="event-place-pin">📍</span>
+                                <span class="font-black text-[#7E22CE] ml-1">${i.place.replace("성의교정", "").trim()}</span>
+                                <span>${i.event}</span>
+                            </div>`).join('')}
+                    </div>`;
+            }
+
+            // [두 건물 모두 행사 없을 때]
+            if(h.length === 0 && r_f.length === 0) {
+                html = `<div class="text-xs text-slate-300 ml-1 py-2">오늘 등록된 행사(수업)가 없습니다.</div>`;
+            }
+            
+            document.getElementById('event-list').innerHTML = html;
         }
 
         async function updateMeal(date) {
