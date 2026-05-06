@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mV40 통합조회</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f3f4f6; }
+        .chip-active { background-color: #2563eb !important; color: white !important; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="pb-10">
+    <div class="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b px-4 py-3 shadow-sm">
+        <div class="flex justify-between items-center mb-3">
+            <h1 class="text-xl font-extrabold text-slate-800">mV40 <span class="text-blue-600">통합</span></h1>
+            <input type="date" id="datePicker" class="border rounded-lg px-2 py-1 text-sm font-bold shadow-sm" onchange="loadData()">
+        </div>
+        <div class="flex gap-2 overflow-x-auto no-scrollbar" id="buildingChips">
+            <button onclick="filterByBu('전체')" class="bu-chip chip-active flex-none px-4 py-1.5 rounded-full bg-white border text-xs font-bold shadow-sm">전체</button>
+            <button onclick="filterByBu('성의회관')" class="bu-chip flex-none px-4 py-1.5 rounded-full bg-white border text-xs font-bold shadow-sm">성의회관</button>
+            <button onclick="filterByBu('의산연')" class="bu-chip flex-none px-4 py-1.5 rounded-full bg-white border text-xs font-bold shadow-sm">의산연</button>
+            <button onclick="filterByBu('병원별관')" class="bu-chip flex-none px-4 py-1.5 rounded-full bg-white border text-xs font-bold shadow-sm">병원별관</button>
+        </div>
+    </div>
+
+    <div id="loading" class="text-center py-20 hidden">
+        <i class="fas fa-spinner fa-spin text-3xl text-blue-500"></i>
+        <p class="mt-2 text-sm font-bold text-slate-500">데이터를 불러오는 중...</p>
+    </div>
+
+    <div id="cardContainer" class="px-4 mt-4 space-y-4"></div>
+
+    <script>
+        let allRentals = [];
+        let allGuides = [];
+        let currentBu = "전체";
+
+        window.onload = function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('datePicker').value = today;
+            loadData();
+        };
+
+        function loadData() {
+            const date = document.getElementById('datePicker').value;
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('cardContainer').innerHTML = '';
+
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    allRentals = res.rentals;
+                    allGuides = res.guides;
+                    renderCards();
+                    document.getElementById('loading').classList.add('hidden');
+                })
+                .getUnifiedData(date);
+        }
+
+        function filterByBu(bu) {
+            currentBu = bu;
+            document.querySelectorAll('.bu-chip').forEach(btn => {
+                btn.classList.remove('chip-active');
+                if(btn.innerText === bu) btn.classList.add('chip-active');
+            });
+            renderCards();
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cardContainer');
+            container.innerHTML = '';
+            const keyword = (currentBu === "의산연") ? "의생명산업연구원" : currentBu;
+
+            const filtered = allRentals.filter(r => currentBu === "전체" || r.bu.includes(keyword));
+
+            if(filtered.length === 0) {
+                container.innerHTML = '<p class="text-center py-20 text-slate-400 font-bold">내역이 없습니다.</p>';
+                return;
+            }
+
+            filtered.forEach(r => {
+                const roomNum = r.place.replace(/[^0-9-]/g, "");
+                const guide = allGuides.find(g => g.bu.includes((r.bu === "의산연" ? "의생명산업연구원" : r.bu)) && g.room.includes(roomNum));
+
+                let guideHtml = "";
+                if (guide) {
+                    guideHtml = `
+                        <div class="mt-2 p-2 ${guide.isExpired ? 'bg-red-50 border-red-400' : 'bg-amber-50 border-amber-400'} border-l-4 rounded">
+                            <div class="text-[11px] font-bold ${guide.isExpired ? 'text-red-800' : 'text-amber-800'}">
+                                📢 개방지침: ${guide.content}
+                                ${guide.isExpired ? '<br><span class="text-red-600 underline">** 기간연장 여부 확인 바람</span>' : ''}
+                            </div>
+                            ${guide.extra ? `<div class="text-[10px] text-blue-600 font-bold mt-1">🔑 ${guide.extra}</div>` : ''}
+                        </div>`;
+                }
+
+                const card = `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-[6px] ${r.source === '특수' ? 'border-green-500' : 'border-blue-500'}">
+                        <div class="flex justify-between mb-1">
+                            <span class="text-[10px] font-bold text-slate-400">${r.bu}</span>
+                            <span class="text-xs font-black text-rose-500">${r.time}</span>
+                        </div>
+                        <div class="text-sm font-black text-slate-800 mb-1">📍 ${r.place} <span class="text-[10px] font-bold text-blue-500">[${r.status}]</span></div>
+                        <div class="text-base font-extrabold text-slate-900 leading-tight mb-1">${r.event}</div>
+                        <div class="text-[11px] text-slate-400">${r.dept}</div>
+                        ${guideHtml}
+                    </div>`;
+                container.innerHTML += card;
+            });
+        }
+    </script>
+</body>
+</html>
