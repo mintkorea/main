@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 줌 기능 복원: user-scalable=no 및 maximum-scale 제한 제거 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>성의교정 대관 현황 (Mobile)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -109,7 +110,6 @@
         let currentDate = new Date();
         let fp;
 
-        // [추가] URL 파라미터에서 날짜를 읽어오는 로직
         function initDateFromURL() {
             const params = new URLSearchParams(window.location.search);
             const dateParam = params.get('date');
@@ -238,7 +238,7 @@
         function moveDate(offset) { if (offset === 0) currentDate = new Date(); else currentDate.setDate(currentDate.getDate() + offset); updateDisplay(); window.scrollTo({top: 0, behavior: 'smooth'}); }
 
         window.onload = () => {
-            initDateFromURL(); // 1. URL 파라미터 날짜 우선 적용
+            initDateFromURL(); 
             fp = flatpickr("#datePicker", { locale: "ko", dateFormat: "Y.m.d (D)", defaultDate: currentDate, disableMobile: "true", onChange: (sd) => { if(sd.length > 0) { currentDate = sd[0]; updateDisplay(); } } });
             
             const container = document.getElementById('buContainer');
