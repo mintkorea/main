@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 줌 기능 복원: user-scalable=no 제거 및 scale 제한 해제 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>성의교정 통합조회</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -84,6 +85,10 @@
         }
         .quick-btn span { font-size: 0.9rem; color: #475569; font-weight: 800; }
         .cached-tag { font-size: 9px; color: rgba(255,255,255,0.4); font-weight: 400; margin-top: 4px; }
+
+        /* 배지 클릭 가능 스타일 추가 */
+        #shift-badge { cursor: pointer; transition: transform 0.1s; }
+        #shift-badge:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -95,7 +100,8 @@
                     <div id="datePickerTrigger" class="custom-date-trigger">날짜 선택</div>
                     <div id="cache-status" class="cached-tag"></div>
                 </div>
-                <div id="shift-badge" class="px-4 py-2 rounded-xl font-black text-[13px] shadow-sm">--조 근무</div>
+                <!-- 우측 상단 배지: 클릭 시 team.html로 이동 기능 추가 -->
+                <div id="shift-badge" onclick="location.href='team.html'" class="px-4 py-2 rounded-xl font-black text-[13px] shadow-sm">--조 근무</div>
             </div>
         </div>
 
@@ -148,7 +154,6 @@
     </div>
 
     <script>
-        // 대관 성공 소스에서 사용하는 것과 동일한 API 주소
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzDWH34gJk42elBUl-Jky8kvvVlA8s36pYi-bU05wxr7CoOlrWNbOAKS-wxj8kYb-JV/exec";
         const MEAL_API_URL = "https://script.google.com/macros/s/AKfycbxZkcn8EEcGcxMaT98l_CKJTCM_0Ual_S2JefpHptm_dbEtQ5tjM00TEhU2XdqTObLh/exec";
         
@@ -165,7 +170,6 @@
         let currentDate = getKSTNow();
         function getKSTNow() { const now = new Date(); return new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 60 * 60000)); }
 
-        // [핵심] 날짜 형식 생성 함수 (YYYY-MM-DD)
         function formatDate(date) {
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -173,7 +177,6 @@
             return `${y}-${m}-${d}`;
         }
 
-        // 근무 UI 업데이트
         function updateDutyUI() {
             const days = ['일','월','화','수','목','금','토'];
             const container = document.getElementById('duty-preview-container');
@@ -226,7 +229,6 @@
             return workersPatternC[idx];
         }
 
-        // [핵심] 행사 데이터 업데이트 (기존 성공 소스 로직 완벽 이식)
         async function updateEvents() {
             const container = document.getElementById('event-list');
             const targetDateStr = formatDate(currentDate);
@@ -246,14 +248,12 @@
                 container.innerHTML = html;
             };
 
-            // 1. 캐시 먼저 확인 및 렌더링
             const cached = localStorage.getItem("rental_db_cache");
             if (cached) {
                 renderHtml(JSON.parse(cached));
                 document.getElementById('cache-status').innerText = "정보 동기화 중...";
             }
 
-            // 2. 실시간 데이터 가져오기
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
@@ -268,7 +268,6 @@
             }
         }
 
-        // 식단 업데이트
         async function updateMeal() {
             const targetDateStr = formatDate(currentDate);
             try {
