@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>연차관리 Mobile</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <style>
+        :root { --primary: #3498db; --bg: #f8f9fa; --text: #2c3e50; --sun: #e74c3c; --sat: #3498db; }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 80px; }
+
+        /* 헤더 영역 */
+        header { 
+            background: white; padding: 15px; position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        #viewTitle { margin: 0; font-size: 18px; font-weight: bold; color: var(--primary); }
+        input[type="month"] { 
+            border: 1px solid #ddd; padding: 8px 15px; border-radius: 20px; 
+            font-size: 14px; width: 100%; max-width: 200px; text-align: center;
+        }
+
+        /* 메인 컨텐츠 영역 */
+        .container { padding: 15px; }
+
+        /* 카드형 리스트 (연차명단 전용) */
+        .day-card {
+            background: white; border-radius: 15px; padding: 15px; margin-bottom: 12px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.03); border: 1px solid #eee;
+        }
+        .day-header { 
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #f1f1f1; padding-bottom: 8px; margin-bottom: 10px;
+        }
+        .day-label { font-size: 16px; font-weight: bold; }
+        .count-badge { background: #eee; padding: 2px 10px; border-radius: 10px; font-size: 12px; color: #666; }
+        
+        .person-item { 
+            display: flex; align-items: center; gap: 10px; padding: 8px 0;
+            border-bottom: 1px inset #fafafa;
+        }
+        .person-item:last-child { border: none; }
+        .person-info { font-size: 15px; }
+        .person-sub { font-size: 12px; color: #95a5a6; }
+
+        .none-msg { color: #ccc; text-align: center; font-size: 13px; padding: 10px 0; }
+
+        /* 하단 내비게이션 바 */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+            background: white; display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 -2px 15px rgba(0,0,0,0.1); padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; 
+            background: none; border: none; cursor: pointer; color: #bdc3c7; gap: 4px;
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 20px; }
+        .nav-label { font-size: 11px; font-weight: bold; }
+
+        /* 실시간 상태 표시 */
+        #syncStatus { position: fixed; top: 10px; right: 10px; font-size: 10px; color: #27ae60; z-index: 101; font-weight: bold; }
+
+        /* 요일별 색상 */
+        .sun { color: var(--sun); }
+        .sat { color: var(--sat); }
+    </style>
+</head>
+<body>
+
+<div id="syncStatus">●</div>
+
+<header>
+    <h1 id="viewTitle">연차 확인</h1>
+    <input type="month" id="targetMonth" onchange="render()">
+</header>
+
+<div class="container" id="mainContent">
+    </div>
+
+<nav class="nav-bar">
+    <button class="nav-item active" onclick="changeTab('list', this)">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">연차명단</span>
+    </button>
+    <button class="nav-item" onclick="changeTab('table', this)">
+        <span class="nav-icon">🗓️</span>
+        <span class="nav-label">일정표</span>
+    </button>
+</nav>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDGDUudF49hnXwU55er7joyeSLEPrme1GU",
+        authDomain: "catholic-security-system.firebaseapp.com",
+        projectId: "catholic-security-system",
+        storageBucket: "catholic-security-system.firebasestorage.app",
+        messagingSenderId: "978946205343",
+        appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let currentTab = 'list';
+    let staffData = [];
+    let vData = {};
+
+    function initSync() {
+        db.collection("vocation_app").doc("data").onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                staffData = data.staff || [];
+                vData = data.vocation || {};
+                render();
+            }
+        });
+    }
+
+    function render() {
+        const val = document.getElementById('targetMonth').value;
+        const [y, m] = val.split('-').map(Number);
+        
+        if (currentTab === 'list') {
+            renderMobileList(y, m);
+        } else {
+            renderMobileTable(y, m);
+        }
+    }
+
+    // [모바일] 카드형 연차 명단
+    function renderMobileList(y, m) {
+        const lastDay = new Date(y, m, 0).getDate();
+        const mk = `${y}-${String(m).padStart(2,'0')}`;
+        let html = "";
+
+        for (let d = 1; d <= lastDay; d++) {
+            const dateObj = new Date(y, m - 1, d);
+            const dayIdx = dateObj.getDay();
+            const dayName = ['일','월','화','수','목','금','토'][dayIdx];
+            const colorClass = dayIdx === 0 ? 'sun' : dayIdx === 6 ? 'sat' : '';
+
+            const dStr = String(d);
+            const visitors = staffData.filter(s => {
+                const vDays = (vData[mk]?.[s.n] || "").split(',').map(x => x.trim());
+                return vDays.includes(dStr);
+            });
+
+            html += `
+                <div class="day-card">
+                    <div class="day-header ${colorClass}">
+                        <span class="day-label">${m}.${d} (${dayName})</span>
+                        <span class="count-badge">${visitors.length}명</span>
+                    </div>
+                    <div class="day-body">
+                        ${visitors.length > 0 
+                            ? visitors.map(v => `
+                                <div class="person-item">
+                                    <div class="person-info"><b>${v.n}</b></div>
+                                    <div class="person-sub">${v.p} / ${v.s}</div>
+                                </div>`).join('')
+                            : '<div class="none-msg">연차 인원 없음</div>'}
+                    </div>
+                </div>`;
+        }
+        document.getElementById('mainContent').innerHTML = html;
+        document.getElementById('viewTitle').innerText = `${m}월 연차자 명단`;
+    }
+
+    // [모바일] 간소화된 일정표 (가로 스크롤 표)
+    function renderMobileTable(y, m) {
+        const lastDay = new Date(y, m, 0).getDate();
+        const mk = `${y}-${String(m).padStart(2,'0')}`;
+        
+        let h = `<div style="overflow-x:auto; background:white; border-radius:10px;"><table style="border-collapse:collapse; width:100%; font-size:12px; min-width:600px;">`;
+        h += `<tr style="background:#f2f2f2;"><td style="padding:10px; border:1px solid #ddd; width:60px;">성명</td>`;
+        for(let i=1; i<=lastDay; i++) h += `<td style="border:1px solid #ddd; text-align:center;">${i}</td>`;
+        h += `</tr>`;
+
+        staffData.forEach(staff => {
+            const vArr = (vData[mk]?.[staff.n] || "").split(',').map(s => s.trim());
+            h += `<tr><td style="padding:8px; border:1px solid #ddd; font-weight:bold;">${staff.n}</td>`;
+            for(let i=1; i<=lastDay; i++) {
+                const isV = vArr.includes(String(i));
+                h += `<td style="border:1px solid #ddd; text-align:center; background:${isV?'#d4edda':''};">${isV?'V':''}</td>`;
+            }
+            h += `</tr>`;
+        });
+        h += `</table></div>`;
+        
+        document.getElementById('mainContent').innerHTML = h;
+        document.getElementById('viewTitle').innerText = `${m}월 전체 일정`;
+    }
+
+    function changeTab(tab, btn) {
+        currentTab = tab;
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        render();
+        window.scrollTo(0,0);
+    }
+
+    window.onload = function() {
+        const today = new Date();
+        document.getElementById('targetMonth').value = today.toISOString().substring(0, 7);
+        initSync();
+    };
+</script>
+</body>
+</html>
