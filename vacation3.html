@@ -2,75 +2,34 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>성의교정 연차 관리 시스템</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --sat-bg: #f5faff; --sun-bg: #fff5f5; --primary-blue: #3498db; }
-        html, body { margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; }
-        .content-area { display: flex; justify-content: center; padding: 20px 10px; min-height: 100vh; box-sizing: border-box; }
-        #paper { background: white; width: 285mm; padding: 10px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-radius: 4px; max-width: 100%; }
-        #viewTitle { text-align: center; margin: 10px 0 20px 0; font-size: 24px; font-weight: bold; text-decoration: underline; }
-        #tableWrapper { width: 100%; overflow-x: auto; }
-        table { border-collapse: collapse; width: 100%; min-width: 1000px; border: 1.5pt solid #000; table-layout: fixed; }
-        td { border: 0.5pt solid #000; text-align: center; font-weight: bold; height: 22px; font-size: 11px; padding: 0; overflow: hidden; }
-        .hdr { background: #f2f2f2 !important; height: 32px; cursor: pointer; }
-        .border-right-bold { border-right: 1.5pt solid #000 !important; }
-        .sat { background-color: var(--sat-bg) !important; color: #007bff !important; }
-        .sun { background-color: var(--sun-bg) !important; color: #dc3545 !important; }
-        .v-mark { background-color: #d4edda !important; color: #28a745; font-weight: bold; cursor: pointer; }
-        
-        .controls-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 2000; }
-        .floating-bar { display: flex; align-items: center; gap: 8px; background: white; padding: 10px 20px; border-radius: 40px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); border: 1px solid #ddd; }
-        .btn { padding: 9px 18px; cursor: pointer; border: none; font-weight: bold; font-size: 13px; border-radius: 25px; color: white; transition: 0.2s; }
-        .btn-orange { background: #e67e22; }
-        .btn-blue { background: #3498db; }
-        .btn-green { background: #27ae60; }
-        .btn-gray { background: #95a5a6; }
-        #adminMenu { display: none; gap: 5px; }
-        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; z-index: 3000; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 350px; }
-        #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2999; }
-
-        @media print {
-            @page { size: A4 landscape; margin: 10mm; }
-            .controls-container, #modal, #modalOverlay { display: none !important; }
-        }
+        body { margin: 0; padding: 20px; font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; }
+        #paper { background: white; width: 285mm; padding: 20px; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        table { border-collapse: collapse; width: 100%; border: 1.5pt solid #000; table-layout: fixed; }
+        td { border: 0.5pt solid #000; text-align: center; height: 25px; font-size: 11px; }
+        .hdr { background: #f2f2f2 !important; font-weight: bold; }
+        .v-mark { background-color: #d4edda !important; color: #28a745; font-weight: bold; }
+        .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 9999; }
+        .btn { padding: 10px 20px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-<div id="modalOverlay" onclick="closeModal()"></div>
-<div id="modal">
-    <div style="background:var(--primary-blue); color:white; padding:18px; font-weight:bold; text-align:center;" id="modalTitle">정보</div>
-    <div style="padding:30px 20px; text-align:center;" id="modalContent"></div>
-    <button style="width:100%; padding:15px; background:#f8f9fa; border:none; cursor:pointer; font-weight:bold;" onclick="closeModal()">닫기</button>
+<div id="paper">
+    <h2 id="viewTitle" style="text-align:center; text-decoration: underline;"></h2>
+    <table id="displayTable"></table>
 </div>
 
-<div class="content-area">
-    <div id="paper">
-        <h2 id="viewTitle">데이터 로딩 중...</h2>
-        <div id="tableWrapper">
-            <table id="displayTable"></table>
-        </div>
-    </div>
-</div>
-
-<div class="controls-container">
-    <div class="floating-bar">
-        <button class="btn btn-gray" onclick="toggleAdmin()">⚙</button>
-        <div id="adminMenu">
-            <button class="btn btn-gray" onclick="backupData()">백업</button>
-            <input type="file" id="fileInput" style="display:none" onchange="restoreData(event)">
-            <button class="btn btn-gray" onclick="document.getElementById('fileInput').click()">복구</button>
-        </div>
-        <input type="month" id="targetMonth" onchange="render()">
-        <button class="btn btn-green" onclick="exportToExcel()">엑셀</button>
-        <button class="btn btn-orange" onclick="changeTab('ledger')">대장</button>
-        <button class="btn btn-blue" onclick="changeTab('schedule')">일정</button>
-        <button class="btn btn-blue" onclick="window.print()">인쇄</button>
-    </div>
+<div class="controls">
+    <input type="month" id="targetMonth" onchange="render()">
+    <button class="btn" style="background:#27ae60;" onclick="exportToExcel()">엑셀 다운로드</button>
+    <button class="btn" style="background:#3498db;" onclick="window.print()">인쇄</button>
 </div>
 
 <script>
@@ -82,14 +41,13 @@
         messagingSenderId: "978946205343",
         appId: "1:978946205343:web:38c30a21bf0dd522f9a4aa"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const COLL = "vacation_system", DOC = "data";
-    let currentTab = 'schedule', staffData = [], vData = {}, activeCol = null;
+
+    let staffData = [], vData = {};
 
     function initSync() {
-        db.collection(COLL).doc(DOC).onSnapshot(doc => {
+        db.collection("vacation_system").doc("data").onSnapshot(doc => {
             if (doc.exists) {
                 const d = doc.data();
                 staffData = d.staff || []; vData = d.vacation || {};
@@ -102,80 +60,45 @@
         const val = document.getElementById('targetMonth').value;
         if(!val) return;
         const [y, m] = val.split('-').map(Number);
-        if (currentTab === 'ledger') renderLedger(y);
-        else renderSchedule(y, m);
-    }
-
-    function renderSchedule(y, m) {
         const last = new Date(y, m, 0).getDate();
         document.getElementById('viewTitle').innerText = `성의교정 연차 일정표(${y}년 ${m}월)`;
-        let h = `<thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td class="border-right-bold">성명</td>`;
+
+        let h = `<thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td>성명</td>`;
         for(let i=1; i<=last; i++) h += `<td>${i}</td>`;
-        h += `</tr></thead><tbody>${generateRows(y, m)}</tbody>`;
-        document.getElementById('displayTable').innerHTML = h;
-    }
+        h += `</tr></thead><tbody>`;
 
-    function renderLedger(y) {
-        document.getElementById('viewTitle').innerText = `성의교정 연차 관리대장(${y}년)`;
-        let h = `<thead><tr class="hdr"><td>구분</td><td>조</td><td>직위</td><td class="border-right-bold">성명</td>`;
-        for(let i=1; i<=12; i++) h += `<td>${i}월</td>`;
-        h += `<td>합계</td></tr></thead><tbody>${generateRows(y, null)}</tbody>`;
-        document.getElementById('displayTable').innerHTML = h;
-    }
-
-    function generateRows(y, m) {
-        let rows = "";
         staffData.forEach((s, idx) => {
             const isNewG = idx===0 || staffData[idx-1].g !== s.g;
             const isNewS = idx===0 || staffData[idx-1].s !== s.s || staffData[idx-1].g !== s.g;
-            rows += `<tr>`;
-            if(isNewG) rows += `<td rowspan="${staffData.filter(x=>x.g===s.g).length}">${s.g}</td>`;
-            if(isNewS) rows += `<td rowspan="${staffData.filter(x=>x.g===s.g && x.s===s.s).length}">${s.s}</td>`;
-            rows += `<td>${s.p}</td><td class="border-right-bold">${s.n}</td>`;
+            h += `<tr>`;
+            if(isNewG) h += `<td rowspan="${staffData.filter(x=>x.g===s.g).length}">${s.g}</td>`;
+            if(isNewS) h += `<td rowspan="${staffData.filter(x=>x.g===s.g && x.s===s.s).length}">${s.s}</td>`;
+            h += `<td>${s.p}</td><td>${s.n}</td>`;
             
-            if (m === null) {
-                let total = 0;
-                for(let i=1; i<=12; i++) {
-                    const mk = `${y}-${String(i).padStart(2,'0')}`;
-                    const val = vData[mk]?.[s.n] || "";
-                    if(val) total += val.split(',').length;
-                    rows += `<td>${val}</td>`;
-                }
-                rows += `<td>${total || ''}</td>`;
-            } else {
-                const mk = `${y}-${String(m).padStart(2,'0')}`;
-                const vArr = (vData[mk]?.[s.n] || "").split(',').map(x=>x.trim());
-                for(let i=1; i<=new Date(y, m, 0).getDate(); i++) {
-                    const isV = vArr.includes(String(i));
-                    rows += `<td class="${isV?'v-mark':''}">${isV?'V':''}</td>`;
-                }
+            const mk = `${y}-${String(m).padStart(2,'0')}`;
+            const vArr = (vData[mk]?.[s.n] || "").split(',').map(x=>x.trim());
+            for(let i=1; i<=last; i++) {
+                const isV = vArr.includes(String(i));
+                h += `<td class="${isV?'v-mark':''}">${isV?'V':''}</td>`;
             }
-            rows += `</tr>`;
+            h += `</tr>`;
         });
-        return rows;
+        document.getElementById('displayTable').innerHTML = h + `</tbody>`;
     }
 
     function exportToExcel() {
-        const wb = XLSX.utils.table_to_book(document.getElementById('displayTable'), {sheet: "연차표", raw: true});
-        XLSX.writeFile(wb, `${document.getElementById('viewTitle').innerText}.xlsx`);
-    }
+        // HTML 테이블을 엑셀 워크북으로 변환 (셀 병합 정보 유지)
+        const wb = XLSX.utils.table_to_book(document.getElementById('displayTable'), {
+            sheet: "연차일정표", 
+            raw: true
+        });
 
-    function changeTab(t) { currentTab = t; render(); }
-    function toggleAdmin() { if(prompt("비밀번호")==="1234") document.getElementById('adminMenu').style.display='flex'; }
-    function openModal() { document.getElementById('modal').style.display='block'; document.getElementById('modalOverlay').style.display='block'; }
-    function closeModal() { document.getElementById('modal').style.display='none'; document.getElementById('modalOverlay').style.display='none'; }
-    
-    async function backupData() {
-        const d = await db.collection(COLL).doc(DOC).get();
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([JSON.stringify(d.data(), null, 2)], {type: "application/json"}));
-        a.download = `연차백업_${new Date().toISOString().slice(0,10)}.json`; a.click();
-    }
-
-    function restoreData(e) {
-        const reader = new FileReader();
-        reader.onload = async (ev) => { if(confirm("데이터를 복구하시겠습니까?")) { await db.collection(COLL).doc(DOC).set(JSON.parse(ev.target.result)); location.reload(); } };
-        reader.readAsText(e.target.files[0]);
+        // 엑셀 옵션 설정 (인쇄 시 A4 가로 설정 등)
+        const ws = wb.Sheets["연차일정표"];
+        ws['!pageSetup'] = { orientation: 'landscape', paperSize: 9 }; // 9는 A4
+        
+        const title = document.getElementById('viewTitle').innerText;
+        XLSX.writeFile(wb, `${title}.xlsx`);
     }
 
     window.onload = () => {
